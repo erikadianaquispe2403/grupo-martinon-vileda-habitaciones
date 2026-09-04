@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Levantamiento Vileda · Grupo Martinón</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
     --navy:#1F3864;
@@ -195,7 +196,8 @@
   }
   .yn button.active-yes{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);}
   .yn button.active-no{background:var(--risk-bg);border-color:var(--risk);color:var(--risk);}
-  .yn button.active-neutral{background:#EAEEF5;border-color:var(--navy);color:var(--navy);}  .subhead{
+  .yn button.active-neutral{background:#EAEEF5;border-color:var(--navy);color:var(--navy);}
+  .subhead{
     font-size:12px;
     font-weight:700;
     color:var(--navy);
@@ -262,6 +264,20 @@
   .info-box strong{color:var(--navy);}
   .info-box ul{margin:8px 0 0;padding-left:18px;}
   .info-box li{margin-bottom:4px;}
+  .print-only{display:none;}
+  @media print{
+    body *{ visibility:hidden; }
+    #printReport, #printReport *{ visibility:visible; }
+    #printReport{ position:absolute; top:0; left:0; width:100%; padding:20px; display:block; }
+    #printReport h1{ font-size:18px; color:#1F3864; margin:0 0 2px; }
+    #printReport .pr-eyebrow{ font-size:11px; color:#B08D3E; letter-spacing:.02em; margin-bottom:8px; }
+    #printReport .pr-meta{ font-size:11px; color:#5B5F66; margin-bottom:16px; }
+    #printReport table{ width:100%; border-collapse:collapse; font-size:9.5px; }
+    #printReport th{ text-align:left; background:#EFEFEF; padding:4px 6px; border:1px solid #ccc; }
+    #printReport td{ padding:4px 6px; border:1px solid #ccc; vertical-align:top; }
+    #printReport img{ max-width:50px; max-height:50px; }
+    #printReport .pr-risk{ color:#B3261E; font-weight:700; }
+  }
   .detail-row td{
     background:#FAF9F5;
     padding:14px 18px;
@@ -381,13 +397,6 @@
     border-top:1px solid var(--line);
     background:#fbfaf7;
   }
-.photos-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-width:360px;}
-.photo-slot{aspect-ratio:1/1;border:1.5px dashed var(--gold-light);border-radius:8px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#FAFAFB;cursor:pointer;}
-.photo-slot input{position:absolute;inset:0;opacity:0;cursor:pointer;}
-.photo-slot img{width:100%;height:100%;object-fit:cover;}
-.photo-slot .plus{font-size:26px;color:var(--navy);font-weight:300;}
-.photo-slot .remove{position:absolute;top:4px;right:4px;background:rgba(27,36,48,.75);color:#fff;border:none;border-radius:50%;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;z-index:2;}
-.photos-hint{font-size:11.5px;color:var(--navy-dark);opacity:.7;margin-top:6px;}
 </style>
 </head>
 <body>
@@ -452,7 +461,7 @@
           <label>Categoría de habitación</label>
           <div class="yn" id="f_categoria_yn">
             <button type="button" data-val="regular" onclick="setYN('f_categoria',this)">Regular</button>
-            <button type="button" data-val="club" onclick="setYN('f_categoria',this)">Club</button>
+            <button type="button" data-val="club" onclick="setYN('f_categoria',this)">Club (Preferred)</button>
           </div>
         </div>
         <div class="field">
@@ -478,15 +487,18 @@
       <div class="field">
         <fieldset>
           <legend>Momento / uso de la mopa seca (marcar todo lo observado)</legend>
-          <div class="check-row"><input type="checkbox" value="Barrido inicial" class="c_modoseca"> Barrido inicial</div>
-          <div class="check-row"><input type="checkbox" value="Eliminación de cabellos" class="c_modoseca"> Eliminación de cabellos</div>
-          <div class="check-row"><input type="checkbox" value="Repaso final" class="c_modoseca"> Repaso final del piso</div>
-          <div class="check-row"><input type="checkbox" value="Solicitud del huésped" class="c_modoseca"> Solicitud del huésped (evitar piso húmedo)</div>
+          <div class="check-row"><input type="checkbox" value="1 - Despolvar alturas" class="c_modoseca"> 1 — Despolvar alturas (techos, lámparas, cornisas)</div>
+          <div class="check-row"><input type="checkbox" value="2 - Despolvado de mobiliario y superficies medias" class="c_modoseca"> 2 — Despolvado de mobiliario y superficies medias <span style="color:var(--gold);font-weight:600;">(a confirmar)</span></div>
+          <div class="check-row"><input type="checkbox" value="3 - Proceso final de limpieza" class="c_modoseca"> 3 — Proceso final de limpieza (piso)</div>
           <div class="check-row"><input type="checkbox" value="Otro" class="c_modoseca"> Otro</div>
         </fieldset>
-        <div style="margin-top:10px;">
-          <label>Comentarios sobre el uso de la mopa seca</label>
-          <textarea id="f_modoseca_comentario" placeholder="Observaciones adicionales (opcional)…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>¿Se usó la escoba para el barrido inicial obligatorio?</label>
+        <div class="yn" id="f_escoba_yn">
+          <button type="button" data-val="si" onclick="setYN('f_escoba',this)">Sí</button>
+          <button type="button" data-val="no" onclick="setYN('f_escoba',this)">No</button>
         </div>
       </div>
 
@@ -560,16 +572,28 @@
       <div class="subhead">Preparación y conocimiento operativo</div>
       <div class="grid2">
         <div class="field">
+          <label>¿Quién prepara las mopas?</label>
+          <select id="f_quienprepara">
+            <option value="">Seleccionar…</option>
+            <option>La misma camarista</option>
+            <option>Supervisor(a)</option>
+            <option>Ama de llaves de turno</option>
+            <option>Personal de lavandería / mopa central</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="field">
           <label>Método de humectación de las mopas</label>
           <select id="f_humectacion">
             <option value="">Seleccionar…</option>
             <option>Solo agua</option>
             <option>Solución multiusos</option>
-            <option>Agua y solución multiusos</option>
             <option>Cubo con agua</option>
             <option>Otro</option>
           </select>
         </div>
+      </div>
+      <div class="grid2">
         <div class="field">
           <label>¿Camarista conoce fibra blanca vs. paño blanco?</label>
           <select id="f_conocefibra">
@@ -579,14 +603,11 @@
             <option>Confundido</option>
           </select>
         </div>
+        <div class="field" style="margin-bottom:0;"></div>
       </div>
       <div class="field">
         <label>Producto químico usado para limpieza de vasos</label>
         <input type="text" id="f_productovasos" placeholder="Ej. limpiador multiusos, alcohol…">
-      </div>
-      <div class="field">
-        <label>Comentarios sobre preparación y conocimiento operativo</label>
-        <textarea id="f_humectacion_comentario" placeholder="Observaciones adicionales (opcional)…"></textarea>
       </div>
 
       <div class="subhead">Secuencia y condiciones</div>
@@ -613,7 +634,7 @@
       <div class="grid2">
         <div class="field">
           <label>Levantado por</label>
-          <input type="text" id="f_levantadopor" placeholder="Nombre de quien captura el dato" value="Erika Quispe">
+          <input type="text" id="f_levantadopor" placeholder="Nombre de quien captura el dato">
         </div>
         <div class="field">
           <label>Hora de la visita</label>
@@ -621,19 +642,20 @@
         </div>
       </div>
 
+      <div class="subhead">Evidencia fotográfica (opcional)</div>
       <div class="field">
-        <label>Observaciones</label>
-        <textarea id="f_obs" placeholder="Notas adicionales de la habitación…"></textarea>
+        <label>Foto de la habitación / carro (opcional)</label>
+        <input type="file" id="f_foto" accept="image/*">
+        <div id="fotoPreviewWrap" style="margin-top:8px;display:none;">
+          <img id="fotoPreview" style="max-width:140px;border-radius:6px;border:1px solid var(--line);">
+          <button type="button" class="ghost" onclick="clearFoto()" style="display:block;margin-top:4px;">Quitar foto</button>
+        </div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">No es obligatoria. Puedes tomar una foto nueva o elegir una de tu galería.</div>
       </div>
 
       <div class="field">
-        <label>Fotografías (mín. 2, máx. 3)</label>
-        <div class="photos-grid" id="photos-grid">
-          <div class="photo-slot" data-slot="0"><span class="plus">+</span><input type="file" accept="image/*" capture="environment"></div>
-          <div class="photo-slot" data-slot="1"><span class="plus">+</span><input type="file" accept="image/*" capture="environment"></div>
-          <div class="photo-slot" data-slot="2"><span class="plus">+</span><input type="file" accept="image/*" capture="environment"></div>
-        </div>
-        <p class="photos-hint">Sube al menos 2 fotos de la habitación (dotación de mopas, Soaper/Trapeador, etc.)</p>
+        <label>Observaciones</label>
+        <textarea id="f_obs" placeholder="Notas adicionales de la habitación…"></textarea>
       </div>
 
       <div class="actions">
@@ -653,6 +675,7 @@
     <div class="panel-body" style="padding-top:14px;">
       <div class="actions" style="margin-top:0;margin-bottom:14px;">
         <button class="secondary" onclick="exportExcel()">Exportar a Excel</button>
+        <button class="secondary" onclick="exportPDF()">Exportar a PDF</button>
         <button class="ghost" onclick="confirmClearAll()">Borrar todos los registros</button>
       </div>
       <div class="table-wrap" id="tableWrap"></div>
@@ -700,6 +723,8 @@
 
 </main>
 
+<div id="printReport" class="print-only"></div>
+
 <script>
 const HOTELS = ["Dreams Flora","Dreams Royal Beach","Secrets Royal Beach","Dreams Onyx","Breathless Punta Cana"];
 let entries = [];
@@ -707,105 +732,31 @@ let editingId = null;
 let activeTab = "Todos";
 let expandedIds = new Set();
 const ynState = {};
+let selectedFotoFile = null;
+let editingFotoUrl = '';
+let fotoMarkedForRemoval = false;
 
-// ---- Almacenamiento real: localStorage (siempre) + Supabase (mismo proyecto que las demás apps) ----
-const LOCAL_STORAGE_KEY = 'gm_vileda_room_entries';
-const SUPABASE_URL = 'https://wwnuiriqjbiaggmdrlrk.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3bnVpcmlxamJpYWdnbWRybHJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5OTY5NTgsImV4cCI6MjEwMjU3Mjk1OH0.rNehaDSqpjnb5XvJ-KXfnVU6bGJQzYDKnX54w6ISrh0';
-const SUPABASE_TABLE = 'vileda_room_entries';
-const SYNC_ENABLED = true;
+// ── Configuración de Supabase ────────────────────────────────────────────
+// 1. Ve a tu proyecto de Supabase → Project Settings → API.
+// 2. Copia "Project URL" y pégala en SUPABASE_URL.
+// 3. Copia la "anon public" key y pégala en SUPABASE_ANON_KEY.
+// (Son los mismos valores que ya usa tu plataforma corporativa principal.)
+const SUPABASE_URL = "https://wwnuiriqjbiaggmdrlrk.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_5Xh8VJ78xQOhfxRR-GqyLw_LdDnTlZc";
+const TABLE_NAME = "vileda_room_entries";
 
-async function sbRequest(method, path, body){
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    method,
-    headers:{
-      'apikey': SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'resolution=merge-duplicates,return=representation' : 'return=representation'
-    },
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if(!res.ok){ throw new Error('Supabase error ' + res.status); }
-  return res.json();
-}
-async function sbFetchAll(){ return sbRequest('GET', `${SUPABASE_TABLE}?select=*&order=created_at.desc`); }
-async function sbUpsert(entry){
-  return sbRequest('POST', SUPABASE_TABLE, [{ id: String(entry.id), data: entry, created_at: entry._createdAt || new Date().toISOString() }]);
-}
-async function sbDeleteAll(ids){
-  if(!ids.length) return;
-  return sbRequest('DELETE', `${SUPABASE_TABLE}?id=in.(${ids.map(id=>`"${id}"`).join(',')})`);
+let supabaseClient = null;
+let supabaseReady = false;
+try{
+  if(typeof supabase !== 'undefined' && !SUPABASE_URL.startsWith('PEGA_AQUI') && !SUPABASE_ANON_KEY.startsWith('PEGA_AQUI')){
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseReady = true;
+  }
+}catch(e){
+  supabaseReady = false;
 }
 
 document.getElementById('f_fecha').valueAsDate = new Date();
-
-// ---- Fotografías (mín. 2, máx. 3) ----
-let currentPhotos = [null, null, null];
-function compressImage(file){
-  return new Promise((resolve, reject)=>{
-    const reader = new FileReader();
-    reader.onload = (e)=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const maxW = 900;
-        const scale = Math.min(1, maxW / img.width);
-        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
-        const canvas = document.createElement('canvas');
-        canvas.width = w; canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.62));
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-function wirePhotoSlot(slot, idx){
-  const input = slot.querySelector('input');
-  input.addEventListener('change', async (e)=>{
-    const file = e.target.files[0];
-    if(!file) return;
-    setStatus('Procesando foto…');
-    try{
-      const dataUrl = await compressImage(file);
-      currentPhotos[idx] = dataUrl;
-      slot.innerHTML = `<img src="${dataUrl}" alt="Foto ${idx+1}"><button class="remove" type="button" data-idx="${idx}">✕</button>`;
-      slot.querySelector('.remove').addEventListener('click', (ev)=>{
-        ev.preventDefault(); ev.stopPropagation();
-        currentPhotos[idx] = null;
-        resetPhotoSlot(slot, idx);
-      });
-      setStatus('');
-    }catch(err){ setStatus('No se pudo procesar la foto.', true); }
-  });
-}
-function resetPhotoSlot(slot, idx){
-  slot.innerHTML = `<span class="plus">+</span><input type="file" accept="image/*" capture="environment">`;
-  wirePhotoSlot(slot, idx);
-}
-document.querySelectorAll('.photo-slot').forEach(slot=>wirePhotoSlot(slot, parseInt(slot.dataset.slot,10)));
-function loadPhotosIntoForm(photos){
-  currentPhotos = [photos && photos[0] ? photos[0] : null, photos && photos[1] ? photos[1] : null, photos && photos[2] ? photos[2] : null];
-  document.querySelectorAll('.photo-slot').forEach((slot, idx)=>{
-    if(currentPhotos[idx]){
-      slot.innerHTML = `<img src="${currentPhotos[idx]}" alt="Foto ${idx+1}"><button class="remove" type="button" data-idx="${idx}">✕</button>`;
-      slot.querySelector('.remove').addEventListener('click', (ev)=>{
-        ev.preventDefault(); ev.stopPropagation();
-        currentPhotos[idx] = null;
-        resetPhotoSlot(slot, idx);
-      });
-    }else{
-      resetPhotoSlot(slot, idx);
-    }
-  });
-}
-function clearPhotosForm(){
-  currentPhotos = [null, null, null];
-  document.querySelectorAll('.photo-slot').forEach((slot, idx)=>resetPhotoSlot(slot, idx));
-}
 
 function togglePanel(id){
   document.getElementById(id).classList.toggle('collapsed');
@@ -833,51 +784,186 @@ function setStatus(msg, isErr){
   el.className = 'status' + (isErr ? ' err' : '');
 }
 
-function loadLocal(){
-  try{
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  }catch(e){ return []; }
+document.getElementById('f_foto').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  selectedFotoFile = file;
+  fotoMarkedForRemoval = false;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    document.getElementById('fotoPreview').src = ev.target.result;
+    document.getElementById('fotoPreviewWrap').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+});
+
+function clearFoto(){
+  selectedFotoFile = null;
+  fotoMarkedForRemoval = true;
+  document.getElementById('f_foto').value = '';
+  document.getElementById('fotoPreviewWrap').style.display = 'none';
 }
-function saveLocal(){
-  try{ localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(entries)); }catch(e){}
+
+async function uploadFoto(id, file){
+  if(!supabaseReady) return '';
+  try{
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `${id}-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabaseClient.storage.from('vileda-fotos').upload(path, file, { upsert: true });
+    if(upErr) throw upErr;
+    const { data } = supabaseClient.storage.from('vileda-fotos').getPublicUrl(path);
+    return data?.publicUrl || '';
+  }catch(e){
+    console.error('Error subiendo foto:', e);
+    return '';
+  }
+}
+
+function toDbRow(e){
+  return {
+    id: e.id,
+    hotel: e.hotel,
+    fecha: e.fecha || null,
+    camarista: e.camarista,
+    habitacion: e.habitacion,
+    categoria: e.categoria,
+    estado: e.estado,
+    secas: e.secas !== '' ? Number(e.secas) : null,
+    mojadas: e.mojadas !== '' ? Number(e.mojadas) : null,
+    color_cod: e.colorCod,
+    modo_seca: e.modoSeca || [],
+    escoba_barrido: e.escobaBarrido,
+    soaper: e.soaper,
+    soaper_uso: e.soaperUso || [],
+    supervision: e.supervision,
+    frecuencia: e.frecuencia,
+    squeegee: e.squeegee,
+    fibra: e.fibra,
+    pano: e.pano,
+    quien_prepara: e.quienPrepara,
+    humectacion: e.humectacion,
+    conoce_fibra: e.conoceFibra,
+    producto_vasos: e.productoVasos,
+    secuencia: e.secuencia,
+    mobiliario: e.mobiliario,
+    levantado_por: e.levantadoPor,
+    hora: e.hora || null,
+    foto_url: e.fotoUrl || null,
+    obs: e.obs,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function fromDbRow(r){
+  return {
+    id: r.id,
+    hotel: r.hotel,
+    fecha: r.fecha || '',
+    camarista: r.camarista || '',
+    habitacion: r.habitacion || '',
+    categoria: r.categoria || '',
+    estado: r.estado || '',
+    secas: r.secas != null ? String(r.secas) : '0',
+    mojadas: r.mojadas != null ? String(r.mojadas) : '0',
+    colorCod: r.color_cod || '',
+    modoSeca: r.modo_seca || [],
+    escobaBarrido: r.escoba_barrido || '',
+    soaper: r.soaper || '',
+    soaperUso: r.soaper_uso || [],
+    supervision: r.supervision || '',
+    frecuencia: r.frecuencia || '',
+    squeegee: r.squeegee || '',
+    fibra: r.fibra || '',
+    pano: r.pano || '',
+    quienPrepara: r.quien_prepara || '',
+    humectacion: r.humectacion || '',
+    conoceFibra: r.conoce_fibra || '',
+    productoVasos: r.producto_vasos || '',
+    secuencia: r.secuencia || '',
+    mobiliario: r.mobiliario || '',
+    levantadoPor: r.levantado_por || '',
+    hora: r.hora || '',
+    fotoUrl: r.foto_url || '',
+    obs: r.obs || ''
+  };
 }
 
 async function loadEntries(){
-  entries = loadLocal();
+  if(!supabaseReady){
+    showConfigWarning();
+    entries = [];
+    renderTabs();
+    renderTable();
+    renderSummary();
+    renderCharts();
+    return;
+  }
+  setStatus('Cargando registros desde Supabase…');
+  try{
+    const { data, error } = await supabaseClient
+      .from(TABLE_NAME)
+      .select('*')
+      .order('created_at', { ascending: false });
+    if(error) throw error;
+    entries = (data || []).map(fromDbRow);
+    setStatus('');
+  }catch(e){
+    setStatus('No se pudo conectar a Supabase: ' + e.message, true);
+    entries = [];
+  }
   renderTabs();
   renderTable();
   renderSummary();
   renderCharts();
+}
 
-  if(!SYNC_ENABLED) return;
-  setStatus('Sincronizando con la nube…');
+async function persistEntry(entry){
+  if(!supabaseReady){
+    setStatus('Supabase no está configurado todavía: este registro no se guardó de forma permanente.', true);
+    return true; // allow local-only use before setup is complete
+  }
   try{
-    // Sube primero lo que haya localmente que aún no esté en la nube, para no perder
-    // nada capturado sin conexión antes de traer el estado completo de Supabase.
-    if(entries.length){
-      await sbRequest('POST', SUPABASE_TABLE, entries.map(e=>({id:String(e.id), data:e, created_at: e._createdAt || new Date().toISOString()})));
-    }
-    const rows = await sbFetchAll();
-    entries = rows.map(r => ({...r.data, id: r.id, _createdAt: r.created_at}));
-    saveLocal();
-    setStatus('Sincronizado en la nube.');
-    renderTabs(); renderTable(); renderSummary(); renderCharts();
+    const { error } = await supabaseClient
+      .from(TABLE_NAME)
+      .upsert(toDbRow(entry), { onConflict: 'id' });
+    if(error) throw error;
+    return true;
   }catch(e){
-    setStatus('Guardado local (sin conexión con la nube). Exporta a Excel con frecuencia por si acaso.', true);
+    setStatus('Error al guardar en Supabase: ' + e.message, true);
+    return false;
   }
 }
 
-async function persist(){
-  saveLocal();
-  if(!SYNC_ENABLED){ return true; }
+async function deleteEntryRemote(id){
+  if(!supabaseReady) return true;
   try{
-    await sbRequest('POST', SUPABASE_TABLE, entries.map(e=>({id:String(e.id), data:e, created_at: e._createdAt || new Date().toISOString()})));
-    setStatus('Guardado y sincronizado.');
+    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', id);
+    if(error) throw error;
+    return true;
   }catch(e){
-    setStatus('Guardado local. No se pudo sincronizar con la nube en este momento.', true);
+    alert('Error al eliminar en Supabase: ' + e.message);
+    return false;
   }
-  return true;
+}
+
+async function clearAllRemote(){
+  if(!supabaseReady) return true;
+  try{
+    const { error } = await supabaseClient.from(TABLE_NAME).delete().neq('id', '__none__');
+    if(error) throw error;
+    return true;
+  }catch(e){
+    alert('Error al borrar en Supabase: ' + e.message);
+    return false;
+  }
+}
+
+function showConfigWarning(){
+  const wrap = document.querySelector('main');
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:var(--warn-bg);color:var(--warn);border:1px solid var(--gold-light);border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;';
+  banner.textContent = 'Supabase todavía no está configurado en este archivo (faltan el Project URL y la anon key). Los registros que captures se mantendrán solo mientras esta ventana esté abierta. Exporta a Excel con frecuencia mientras completas la configuración.';
+  wrap.insertBefore(banner, wrap.firstChild);
 }
 
 function isRiesgo(entry){
@@ -896,11 +982,6 @@ async function saveEntry(){
     setStatus('Completa hotel, camarista y número de habitación antes de guardar.', true);
     return;
   }
-  const photosFilled = currentPhotos.filter(p=>p);
-  if(photosFilled.length < 2){
-    setStatus('Sube al menos 2 fotografías antes de guardar.', true);
-    return;
-  }
   const entry = {
     id: editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     hotel,
@@ -913,7 +994,7 @@ async function saveEntry(){
     mojadas: document.getElementById('f_mojadas').value || '0',
     colorCod: ynState['f_color'] || '',
     modoSeca: getChecked('c_modoseca'),
-    modoSecaComentario: document.getElementById('f_modoseca_comentario').value.trim(),
+    escobaBarrido: ynState['f_escoba'] || '',
     soaper: ynState['f_soaper'] || '',
     soaperUso: getChecked('c_soaperuso'),
     supervision: ynState['f_supervision'] || '',
@@ -921,24 +1002,36 @@ async function saveEntry(){
     squeegee: ynState['f_squeegee'] || '',
     fibra: ynState['f_fibra'] || '',
     pano: ynState['f_pano'] || '',
+    quienPrepara: document.getElementById('f_quienprepara').value,
     humectacion: document.getElementById('f_humectacion').value,
-    humectacionComentario: document.getElementById('f_humectacion_comentario').value.trim(),
     conoceFibra: document.getElementById('f_conocefibra').value,
     productoVasos: document.getElementById('f_productovasos').value.trim(),
     secuencia: document.getElementById('f_secuencia').value,
     mobiliario: ynState['f_mobiliario'] || '',
     levantadoPor: document.getElementById('f_levantadopor').value.trim(),
     hora: document.getElementById('f_hora').value,
-    obs: document.getElementById('f_obs').value.trim(),
-    photos: photosFilled
+    obs: document.getElementById('f_obs').value.trim()
   };
-  if(editingId){
-    entries = entries.map(e => e.id === editingId ? entry : e);
-  }else{
-    entries.push(entry);
+
+  let fotoUrl = fotoMarkedForRemoval ? '' : editingFotoUrl;
+  if(selectedFotoFile){
+    setStatus('Subiendo foto…');
+    const uploaded = await uploadFoto(entry.id, selectedFotoFile);
+    if(uploaded){
+      fotoUrl = uploaded;
+    }else{
+      setStatus('No se pudo subir la foto (revisa tu conexión). El registro se guardará sin foto.', true);
+    }
   }
-  const ok = await persist();
+  entry.fotoUrl = fotoUrl;
+
+  const ok = await persistEntry(entry);
   if(ok){
+    if(editingId){
+      entries = entries.map(e => e.id === editingId ? entry : e);
+    }else{
+      entries.push(entry);
+    }
     setStatus(editingId ? 'Registro actualizado.' : 'Registro guardado.');
     clearForm();
     editingId = null;
@@ -960,19 +1053,22 @@ function clearForm(){
   document.getElementById('f_secas').value = '';
   document.getElementById('f_mojadas').value = '';
   document.getElementById('f_frecuencia').value = '';
+  document.getElementById('f_quienprepara').value = '';
   document.getElementById('f_humectacion').value = '';
-  document.getElementById('f_humectacion_comentario').value = '';
   document.getElementById('f_conocefibra').value = '';
   document.getElementById('f_productovasos').value = '';
   document.getElementById('f_secuencia').value = '';
-  document.getElementById('f_levantadopor').value = 'Erika Quispe';
+  document.getElementById('f_levantadopor').value = '';
   document.getElementById('f_hora').value = '';
   document.getElementById('f_obs').value = '';
-  clearPhotosForm();
   document.querySelectorAll('.c_modoseca, .c_soaperuso').forEach(c=>c.checked=false);
-  document.getElementById('f_modoseca_comentario').value = '';
   document.getElementById('soaperUsoWrap').style.display = 'none';
-  ['f_categoria','f_color','f_soaper','f_supervision','f_squeegee','f_fibra','f_pano','f_mobiliario'].forEach(f=>{
+  document.getElementById('f_foto').value = '';
+  document.getElementById('fotoPreviewWrap').style.display = 'none';
+  selectedFotoFile = null;
+  editingFotoUrl = '';
+  fotoMarkedForRemoval = false;
+  ['f_categoria','f_color','f_soaper','f_supervision','f_squeegee','f_fibra','f_pano','f_mobiliario','f_escoba'].forEach(f=>{
     delete ynState[f];
   });
   document.querySelectorAll('.yn button').forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
@@ -993,19 +1089,27 @@ function editEntry(id){
   document.getElementById('f_secas').value = e.secas;
   document.getElementById('f_mojadas').value = e.mojadas;
   document.getElementById('f_frecuencia').value = e.frecuencia || '';
+  document.getElementById('f_quienprepara').value = e.quienPrepara || '';
   document.getElementById('f_humectacion').value = e.humectacion || '';
-  document.getElementById('f_humectacion_comentario').value = e.humectacionComentario || '';
   document.getElementById('f_conocefibra').value = e.conoceFibra || '';
   document.getElementById('f_productovasos').value = e.productoVasos || '';
   document.getElementById('f_secuencia').value = e.secuencia || '';
   document.getElementById('f_levantadopor').value = e.levantadoPor || '';
   document.getElementById('f_hora').value = e.hora || '';
   document.getElementById('f_obs').value = e.obs || '';
-  loadPhotosIntoForm(e.photos || []);
   document.querySelectorAll('.c_modoseca').forEach(c=>c.checked = e.modoSeca.includes(c.value));
-  document.getElementById('f_modoseca_comentario').value = e.modoSecaComentario || '';
   document.querySelectorAll('.c_soaperuso').forEach(c=>c.checked = (e.soaperUso||[]).includes(c.value));
   document.getElementById('soaperUsoWrap').style.display = (e.soaper==='si') ? 'block' : 'none';
+  selectedFotoFile = null;
+  fotoMarkedForRemoval = false;
+  editingFotoUrl = e.fotoUrl || '';
+  document.getElementById('f_foto').value = '';
+  if(editingFotoUrl){
+    document.getElementById('fotoPreview').src = editingFotoUrl;
+    document.getElementById('fotoPreviewWrap').style.display = 'block';
+  }else{
+    document.getElementById('fotoPreviewWrap').style.display = 'none';
+  }
   const setBtn = (field,val)=>{
     if(!val) return;
     const wrap = document.getElementById(field+'_yn');
@@ -1018,6 +1122,7 @@ function editEntry(id){
   };
   setBtn('f_categoria', e.categoria);
   setBtn('f_color', e.colorCod);
+  setBtn('f_escoba', e.escobaBarrido);
   setBtn('f_soaper', e.soaper);
   setBtn('f_supervision', e.supervision);
   setBtn('f_squeegee', e.squeegee);
@@ -1031,10 +1136,10 @@ function editEntry(id){
 }
 
 async function deleteEntry(id){
+  const ok = await deleteEntryRemote(id);
+  if(!ok) return;
   entries = entries.filter(e=>e.id!==id);
   expandedIds.delete(id);
-  await persist();
-  if(SYNC_ENABLED){ sbDeleteAll([id]).catch(()=>{}); }
   renderTabs();
   renderTable();
   renderSummary();
@@ -1044,11 +1149,10 @@ async function deleteEntry(id){
 async function confirmClearAll(){
   if(!entries.length) return;
   if(confirm('¿Borrar todos los registros guardados? Esta acción no se puede deshacer. Considera exportar a Excel primero.')){
-    const idsToDelete = entries.map(e=>e.id);
+    const ok = await clearAllRemote();
+    if(!ok) return;
     entries = [];
     expandedIds.clear();
-    await persist();
-    if(SYNC_ENABLED){ sbDeleteAll(idsToDelete).catch(()=>{}); }
     renderTabs();
     renderTable();
     renderSummary();
@@ -1116,9 +1220,14 @@ function renderTable(){
       </td>
     </tr>`;
     if(!expanded) return mainRow;
+    const fotoHtml = e.fotoUrl
+      ? `<img src="${e.fotoUrl}" style="max-width:90px;border-radius:6px;border:1px solid var(--line);display:block;margin-top:4px;">`
+      : '—';
     const detailRow = `<tr class="detail-row"><td colspan="11">
       <dl class="detail-grid">
         <div><dt>Estado de habitación</dt><dd>${e.estado||'—'}</dd></div>
+        <div><dt>Escoba en barrido inicial obligatorio</dt><dd>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':'—'}</dd></div>
+        <div><dt>Quién prepara las mopas</dt><dd>${e.quienPrepara||'—'}</dd></div>
         <div><dt>Autorización de supervisión (Soaper)</dt><dd>${e.supervision==='si'?'Sí':e.supervision==='no'?'No':'—'}</dd></div>
         <div><dt>Frecuencia declarada (Soaper)</dt><dd>${e.frecuencia||'—'}</dd></div>
         <div><dt>Método de humectación de mopas</dt><dd>${e.humectacion||'—'}</dd></div>
@@ -1128,8 +1237,8 @@ function renderTable(){
         <div><dt>Mobiliario dificulta mopa bajo cama</dt><dd>${e.mobiliario==='si'?'Sí':e.mobiliario==='no'?'No':'—'}</dd></div>
         <div><dt>Levantado por</dt><dd>${e.levantadoPor||'—'}</dd></div>
         <div><dt>Hora de la visita</dt><dd>${e.hora||'—'}</dd></div>
+        <div><dt>Foto</dt><dd>${fotoHtml}</dd></div>
         <div style="grid-column:1/-1;"><dt>Observaciones</dt><dd>${e.obs||'—'}</dd></div>
-        <div style="grid-column:1/-1;"><dt>Fotografías</dt><dd>${(e.photos||[]).length ? `<div style="display:flex;gap:6px;margin-top:4px;">${(e.photos||[]).map(p=>`<img src="${p}" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--gold-light);cursor:pointer;" onclick="window.open(this.src,'_blank')">`).join('')}</div>` : '—'}</dd></div>
       </dl>
     </td></tr>`;
     return mainRow + detailRow;
@@ -1236,7 +1345,7 @@ function renderCharts(){
     HOTELS.map(h => ({ label: shortHotelLabel(h), segments: [{ value: byHotel(h).length, color: gold }] }))
   );
 
-  renderLegend('chartCategoriaLegend', [{color:navy,label:'Regular'},{color:gold,label:'Club'}]);
+  renderLegend('chartCategoriaLegend', [{color:navy,label:'Regular'},{color:gold,label:'Club (Preferred)'}]);
   buildHBarChart('chartCategoria',
     HOTELS.map(h => ({
       label: shortHotelLabel(h),
@@ -1272,7 +1381,7 @@ function exportExcel(){
   const rows = entries.map(e=>({
     'Fecha': e.fecha,
     'Hotel': e.hotel,
-    'Categoría de habitación': e.categoria==='club'?'Club':e.categoria==='regular'?'Regular':'',
+    'Categoría de habitación': e.categoria==='club'?'Club (Preferred)':e.categoria==='regular'?'Regular':'',
     'Estado de habitación': e.estado||'',
     'Camarista': e.camarista,
     'Habitación': e.habitacion,
@@ -1280,6 +1389,7 @@ function exportExcel(){
     'Mopas mojadas': e.mojadas,
     'Mopas codificadas por color': e.colorCod==='si'?'Sí':e.colorCod==='no'?'No':'',
     'Modo de uso mopa seca': (e.modoSeca||[]).join(' | '),
+    'Escoba en barrido inicial obligatorio': e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':'',
     'Uso de Soaper': e.soaper==='si'?'Sí':e.soaper==='no'?'No':'',
     'Para qué se usó el Soaper': (e.soaperUso||[]).join(' | '),
     'Autorización de supervisión (Soaper)': e.supervision==='si'?'Sí':e.supervision==='no'?'No':'',
@@ -1288,6 +1398,7 @@ function exportExcel(){
     'Squeegee presente': e.squeegee==='si'?'Sí':e.squeegee==='no'?'No':'',
     'Fibra blanca': e.fibra==='si'?'Sí':e.fibra==='no'?'No':'',
     'Paño blanco': e.pano==='si'?'Sí':e.pano==='no'?'No':'',
+    'Quién prepara las mopas': e.quienPrepara||'',
     'Método de humectación de mopas': e.humectacion||'',
     'Conoce fibra blanca vs. paño blanco': e.conoceFibra||'',
     'Producto químico para vasos': e.productoVasos||'',
@@ -1295,14 +1406,62 @@ function exportExcel(){
     'Mobiliario dificulta mopa bajo cama': e.mobiliario==='si'?'Sí':e.mobiliario==='no'?'No':'',
     'Levantado por': e.levantadoPor||'',
     'Hora de la visita': e.hora||'',
+    'Foto (URL)': e.fotoUrl||'',
     'Observaciones': e.obs||''
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [{wch:11},{wch:20},{wch:16},{wch:12},{wch:20},{wch:9},{wch:11},{wch:11},{wch:14},{wch:28},{wch:12},{wch:30},{wch:16},{wch:16},{wch:16},{wch:13},{wch:11},{wch:11},{wch:20},{wch:20},{wch:22},{wch:18},{wch:20},{wch:20},{wch:12},{wch:30}];
+  ws['!cols'] = [{wch:11},{wch:20},{wch:16},{wch:12},{wch:20},{wch:9},{wch:11},{wch:11},{wch:14},{wch:28},{wch:14},{wch:12},{wch:30},{wch:16},{wch:16},{wch:16},{wch:13},{wch:11},{wch:11},{wch:24},{wch:20},{wch:20},{wch:22},{wch:18},{wch:20},{wch:20},{wch:12},{wch:40},{wch:30}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Levantamiento Vileda');
   const stamp = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `Levantamiento_Vileda_${stamp}.xlsx`);
+}
+
+function exportPDF(){
+  if(!entries.length){ alert('No hay registros para exportar todavía.'); return; }
+  const list = entries
+    .filter(e => activeTab==='Todos' || e.hotel===activeTab)
+    .sort((a,b)=> (a.hotel||'').localeCompare(b.hotel) || (b.fecha||'').localeCompare(a.fecha||''));
+
+  const rows = list.map(e=>{
+    const riesgo = isRiesgo(e);
+    return `<tr>
+      <td>${e.fecha||''}</td>
+      <td>${e.hotel}</td>
+      <td>${e.categoria==='club'?'Club':e.categoria==='regular'?'Regular':''}</td>
+      <td>${e.camarista}</td>
+      <td>${e.habitacion}</td>
+      <td>${e.secas}s / ${e.mojadas}m</td>
+      <td>${(e.modoSeca||[]).join(', ')}</td>
+      <td>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':''}</td>
+      <td class="${riesgo?'pr-risk':''}">${e.soaper==='si'?(riesgo?'Sí — riesgo':'Sí'):'No'}${e.soaper==='si'&&e.soaperUso.length?'<br><span style="font-weight:400;">'+e.soaperUso.join(', ')+'</span>':''}</td>
+      <td>${e.squeegee==='si'?'Sí':e.squeegee==='no'?'No':''}</td>
+      <td>${e.fibra==='si'?'Sí':'No'} / ${e.pano==='si'?'Sí':'No'}</td>
+      <td>${e.quienPrepara||''}</td>
+      <td>${e.fotoUrl?`<img src="${e.fotoUrl}">`:''}</td>
+    </tr>`;
+  }).join('');
+
+  const total = list.length;
+  const riesgoCount = list.filter(isRiesgo).length;
+  const scope = activeTab === 'Todos' ? 'Todos los hoteles' : activeTab;
+
+  document.getElementById('printReport').innerHTML = `
+    <div class="pr-eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
+    <h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
+    <div class="pr-meta">
+      Alcance: ${scope} &nbsp;·&nbsp; Generado: ${new Date().toLocaleDateString('es-DO')} &nbsp;·&nbsp;
+      ${total} habitaciones registradas &nbsp;·&nbsp; ${riesgoCount} fuera de estándar SOP
+    </div>
+    <table>
+      <thead><tr>
+        <th>Fecha</th><th>Hotel</th><th>Categ.</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
+        <th>Modo mopa seca</th><th>Escoba</th><th>Soaper</th><th>Squeegee</th><th>Fibra/Paño</th><th>Prepara mopas</th><th>Foto</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+  window.print();
 }
 
 loadEntries();
