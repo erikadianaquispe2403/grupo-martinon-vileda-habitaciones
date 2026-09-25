@@ -415,6 +415,23 @@
 
 <main>
 
+  <section class="panel" id="dateFilterPanel" style="margin-bottom:18px;">
+    <div class="panel-body" style="padding:16px 18px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <strong style="color:var(--navy);font-size:13.5px;">Ver datos de:</strong>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="date" id="filterFrom" style="width:auto;">
+          <span style="color:var(--ink-soft);font-size:13px;">a</span>
+          <input type="date" id="filterTo" style="width:auto;">
+        </div>
+        <button class="tab" onclick="setDatePreset('today')">Hoy</button>
+        <button class="tab" onclick="setDatePreset('week')">Últimos 7 días</button>
+        <button class="tab" onclick="setDatePreset('all')">Todo el historial</button>
+        <span id="filterSummaryNote" style="font-size:12px;color:var(--ink-soft);margin-left:auto;"></span>
+      </div>
+    </div>
+  </section>
+
   <div class="cards" id="summaryCards"></div>
 
   <section class="panel" id="formPanel">
@@ -754,6 +771,71 @@ const ynState = {};
 let selectedFotoFiles = [];
 let existingFotoUrls = [];
 
+function todayStr(){
+  const d = new Date();
+  const tz = d.getTimezoneOffset()*60000;
+  return new Date(d - tz).toISOString().slice(0,10);
+}
+
+let dateFrom = todayStr();
+let dateTo = todayStr();
+
+function getFilteredEntries(){
+  return entries.filter(e=>{
+    if(!e.fecha) return false;
+    if(dateFrom && e.fecha < dateFrom) return false;
+    if(dateTo && e.fecha > dateTo) return false;
+    return true;
+  });
+}
+
+function setDatePreset(preset){
+  const today = todayStr();
+  if(preset === 'today'){
+    dateFrom = today; dateTo = today;
+  }else if(preset === 'week'){
+    const d = new Date();
+    d.setDate(d.getDate()-6);
+    const tz = d.getTimezoneOffset()*60000;
+    dateFrom = new Date(d - tz).toISOString().slice(0,10);
+    dateTo = today;
+  }else if(preset === 'all'){
+    dateFrom = ''; dateTo = '';
+  }
+  document.getElementById('filterFrom').value = dateFrom;
+  document.getElementById('filterTo').value = dateTo;
+  applyDateFilter();
+}
+
+function refreshFilterNote(){
+  const note = document.getElementById('filterSummaryNote');
+  const total = getFilteredEntries().length;
+  if(!dateFrom && !dateTo){
+    note.textContent = `Mostrando todo el historial (${total} registros)`;
+  }else{
+    note.textContent = `Mostrando ${total} registro(s) en el rango seleccionado`;
+  }
+}
+
+function applyDateFilter(){
+  renderTabs();
+  renderTable();
+  renderSummary();
+  renderCharts();
+  refreshFilterNote();
+}
+
+document.getElementById('filterFrom').value = dateFrom;
+document.getElementById('filterTo').value = dateTo;
+document.getElementById('filterFrom').addEventListener('change', function(){
+  dateFrom = this.value;
+  applyDateFilter();
+});
+document.getElementById('filterTo').addEventListener('change', function(){
+  dateTo = this.value;
+  applyDateFilter();
+});
+
 // ── Configuración de Supabase ────────────────────────────────────────────
 // 1. Ve a tu proyecto de Supabase → Project Settings → API.
 // 2. Copia "Project URL" y pégala en SUPABASE_URL.
@@ -950,6 +1032,7 @@ async function loadEntries(){
     renderTable();
     renderSummary();
     renderCharts();
+    refreshFilterNote();
     return;
   }
   setStatus('Cargando registros desde Supabase…');
@@ -969,6 +1052,7 @@ async function loadEntries(){
   renderTable();
   renderSummary();
   renderCharts();
+  refreshFilterNote();
 }
 
 async function persistEntry(entry){
@@ -1101,6 +1185,7 @@ async function saveEntry(){
     renderTable();
     renderSummary();
     renderCharts();
+    refreshFilterNote();
   }
 }
 
@@ -1201,6 +1286,7 @@ async function deleteEntry(id){
   renderTable();
   renderSummary();
   renderCharts();
+  refreshFilterNote();
 }
 
 async function confirmClearAll(){
@@ -1214,6 +1300,7 @@ async function confirmClearAll(){
     renderTable();
     renderSummary();
     renderCharts();
+    refreshFilterNote();
   }
 }
 
@@ -1225,8 +1312,9 @@ function toggleDetail(id){
 function renderTabs(){
   const wrap = document.getElementById('hotelTabs');
   const tabs = ['Todos', ...HOTELS];
+  const filtered = getFilteredEntries();
   wrap.innerHTML = tabs.map(t=>{
-    const count = t==='Todos' ? entries.length : entries.filter(e=>e.hotel===t).length;
+    const count = t==='Todos' ? filtered.length : filtered.filter(e=>e.hotel===t).length;
     return `<div class="tab ${t===activeTab?'active':''}" onclick="setTab('${t.replace(/'/g,"\\'")}')">${t} ${count?`(${count})`:''}</div>`;
   }).join('');
 }
@@ -1239,7 +1327,7 @@ function setTab(t){
 
 function renderTable(){
   const wrap = document.getElementById('tableWrap');
-  const list = entries
+  const list = getFilteredEntries()
     .filter(e => activeTab==='Todos' || e.hotel===activeTab)
     .sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
 
@@ -1314,11 +1402,12 @@ function renderTable(){
 }
 
 function renderSummary(){
-  const total = entries.length;
-  const riesgoCount = entries.filter(isRiesgo).length;
-  const avgSecas = total ? (entries.reduce((s,e)=>s+Number(e.secas||0),0)/total).toFixed(1) : '0';
-  const avgMojadas = total ? (entries.reduce((s,e)=>s+Number(e.mojadas||0),0)/total).toFixed(1) : '0';
-  const vasosPct = total ? Math.round(100*entries.filter(e=>e.fibra==='si' && e.pano==='si').length/total) : 0;
+  const filtered = getFilteredEntries();
+  const total = filtered.length;
+  const riesgoCount = filtered.filter(isRiesgo).length;
+  const avgSecas = total ? (filtered.reduce((s,e)=>s+Number(e.secas||0),0)/total).toFixed(1) : '0';
+  const avgMojadas = total ? (filtered.reduce((s,e)=>s+Number(e.mojadas||0),0)/total).toFixed(1) : '0';
+  const vasosPct = total ? Math.round(100*filtered.filter(e=>e.fibra==='si' && e.pano==='si').length/total) : 0;
 
   document.getElementById('summaryCards').innerHTML = `
     <div class="card"><div class="num">${total}</div><div class="lbl">Habitaciones registradas</div></div>
@@ -1388,16 +1477,17 @@ function renderCharts(){
   const wrapIds = ['chartHabitaciones','chartCategoria','chartRiesgo','chartMopas'];
   ['chartCategoriaLegend','chartMopasLegend'].forEach(id=>{ const l=document.getElementById(id); if(l) l.innerHTML=''; });
 
-  if(!entries.length){
+  const filtered = getFilteredEntries();
+  if(!filtered.length){
     wrapIds.forEach(id=>{
       const el = document.getElementById(id);
-      if(el) el.innerHTML = '<div class="chart-empty">Aún no hay datos capturados. Los gráficos aparecerán aquí conforme registres habitaciones.</div>';
+      if(el) el.innerHTML = '<div class="chart-empty">Aún no hay datos capturados en este rango de fechas.</div>';
     });
     return;
   }
 
   const navy = '#1F3864', gold = '#B08D3E', risk = '#B3261E', steel = '#6B8CA3';
-  const byHotel = h => entries.filter(e=>e.hotel===h);
+  const byHotel = h => filtered.filter(e=>e.hotel===h);
 
   buildHBarChart('chartHabitaciones',
     HOTELS.map(h => ({ label: shortHotelLabel(h), segments: [{ value: byHotel(h).length, color: gold }] }))
@@ -1436,8 +1526,9 @@ function renderCharts(){
 }
 
 function exportExcel(){
-  if(!entries.length){ alert('No hay registros para exportar todavía.'); return; }
-  const rows = entries.map(e=>({
+  const filtered = getFilteredEntries();
+  if(!filtered.length){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
+  const rows = filtered.map(e=>({
     'Fecha': e.fecha,
     'Hotel': e.hotel,
     'Categoría de habitación': e.categoria==='preferred'?'Preferred':e.categoria==='xhale'?'X-hale':e.categoria==='regular'?'Regular':'',
@@ -1481,8 +1572,9 @@ function exportExcel(){
 }
 
 function exportPDF(){
-  if(!entries.length){ alert('No hay registros para exportar todavía.'); return; }
-  const list = entries
+  const filtered = getFilteredEntries();
+  if(!filtered.length){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
+  const list = filtered
     .filter(e => activeTab==='Todos' || e.hotel===activeTab)
     .sort((a,b)=> (a.hotel||'').localeCompare(b.hotel) || (b.fecha||'').localeCompare(a.fecha||''));
 
@@ -1507,12 +1599,13 @@ function exportPDF(){
   const total = list.length;
   const riesgoCount = list.filter(isRiesgo).length;
   const scope = activeTab === 'Todos' ? 'Todos los hoteles' : activeTab;
+  const rangeLabel = (dateFrom || dateTo) ? `${dateFrom||'…'} a ${dateTo||'…'}` : 'Todo el historial';
 
   document.getElementById('printReport').innerHTML = `
     <div class="pr-eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
     <h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
     <div class="pr-meta">
-      Alcance: ${scope} &nbsp;·&nbsp; Generado: ${new Date().toLocaleDateString('es-DO')} &nbsp;·&nbsp;
+      Alcance: ${scope} &nbsp;·&nbsp; Rango: ${rangeLabel} &nbsp;·&nbsp; Generado: ${new Date().toLocaleDateString('es-DO')} &nbsp;·&nbsp;
       ${total} habitaciones registradas &nbsp;·&nbsp; ${riesgoCount} fuera de estándar SOP
     </div>
     <table>
