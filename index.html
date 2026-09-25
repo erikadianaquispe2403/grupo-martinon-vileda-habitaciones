@@ -512,7 +512,7 @@
       <div class="field">
         <fieldset>
           <legend>¿En qué caso se usó la mopa seca en esta habitación? (marcar todo lo observado)</legend>
-          <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria" class="c_casosuso"> Limpieza de rutina diaria</div>
+          <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria (respeta la secuencia de uso establecida en el SOP)" class="c_casosuso"> Limpieza de rutina diaria (respeta la secuencia de uso establecida en el SOP)</div>
           <div class="check-row"><input type="checkbox" value="Solicitud especial del huésped" class="c_casosuso"> Solicitud especial del huésped</div>
           <div class="check-row"><input type="checkbox" value="Derrame / emergencia" class="c_casosuso"> Derrame / emergencia</div>
           <div class="check-row"><input type="checkbox" value="Inspección programada o auditoría" class="c_casosuso"> Inspección programada o auditoría</div>
@@ -523,7 +523,7 @@
       <div class="field">
         <fieldset>
           <legend>¿En qué caso se usó la mopa húmeda en esta habitación? (marcar todo lo observado)</legend>
-          <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria" class="c_casosusohumeda"> Limpieza de rutina diaria</div>
+          <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria (respeta la secuencia de uso establecida en el SOP)" class="c_casosusohumeda"> Limpieza de rutina diaria (respeta la secuencia de uso establecida en el SOP)</div>
           <div class="check-row"><input type="checkbox" value="Solicitud especial del huésped" class="c_casosusohumeda"> Solicitud especial del huésped</div>
           <div class="check-row"><input type="checkbox" value="Derrame / emergencia" class="c_casosusohumeda"> Derrame / emergencia</div>
           <div class="check-row"><input type="checkbox" value="Inspección programada o auditoría" class="c_casosusohumeda"> Inspección programada o auditoría</div>
@@ -536,6 +536,7 @@
         <select id="f_limpiamopa">
           <option value="">Seleccionar…</option>
           <option>La sacude/golpea para quitar el polvo</option>
+          <option>La limpia con la escobilla y la reutiliza</option>
           <option>La lava con agua</option>
           <option>La aspira</option>
           <option>No la limpia, la reutiliza sucia</option>
@@ -618,38 +619,17 @@
           </select>
         </div>
         <div class="field">
-          <label>Método de humectación de las mopas</label>
+          <label>Método de humectación/dosificación de las mopas</label>
           <select id="f_humectacion">
             <option value="">Seleccionar…</option>
             <option>Solo agua</option>
             <option>Solución multiusos</option>
             <option>Cubo con agua</option>
             <option>Vaso destinado para los paños</option>
+            <option>10 gatillazos de multiusos y 2 litros de agua, utilizando la placa perforada para humedecer las mopas</option>
             <option>Otro</option>
           </select>
           <textarea id="f_humectacion_detalle" placeholder="Detalle adicional sobre la preparación/humectación (opcional)…" style="margin-top:8px;"></textarea>
-        </div>
-      </div>
-      <div class="grid2">
-        <div class="field">
-          <label>¿Camarista conoce fibra blanca vs. paño blanco?</label>
-          <select id="f_conocefibra">
-            <option value="">Seleccionar…</option>
-            <option>Sabe la diferencia</option>
-            <option>No sabe</option>
-            <option>Confundido</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Dosificación de la solución multiusos</label>
-          <select id="f_dosificacion">
-            <option value="">Seleccionar…</option>
-            <option>Según especificación del fabricante</option>
-            <option>Diluido en exceso (más agua de la indicada)</option>
-            <option>Sobre-concentrado (menos agua de la indicada)</option>
-            <option>No sabe</option>
-            <option>No aplica (solo agua)</option>
-          </select>
         </div>
       </div>
       <div class="field">
@@ -684,13 +664,12 @@
 
       <div class="subhead">Evidencia fotográfica (opcional)</div>
       <div class="field">
-        <label>Foto de la habitación / carro (opcional)</label>
-        <input type="file" id="f_foto" accept="image/*">
+        <label>Fotos de la habitación / carro (opcional)</label>
+        <input type="file" id="f_foto" accept="image/*" multiple>
         <div id="fotoPreviewWrap" style="margin-top:8px;display:none;">
-          <img id="fotoPreview" style="max-width:140px;border-radius:6px;border:1px solid var(--line);">
-          <button type="button" class="ghost" onclick="clearFoto()" style="display:block;margin-top:4px;">Quitar foto</button>
+          <div id="fotoPreviewGrid" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
         </div>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">No es obligatoria. Puedes tomar una foto nueva o elegir una de tu galería.</div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">No son obligatorias. Puedes agregar varias, tomando fotos nuevas o eligiéndolas de tu galería.</div>
       </div>
 
       <div class="field">
@@ -772,9 +751,8 @@ let editingId = null;
 let activeTab = "Todos";
 let expandedIds = new Set();
 const ynState = {};
-let selectedFotoFile = null;
-let editingFotoUrl = '';
-let fotoMarkedForRemoval = false;
+let selectedFotoFiles = [];
+let existingFotoUrls = [];
 
 // ── Configuración de Supabase ────────────────────────────────────────────
 // 1. Ve a tu proyecto de Supabase → Project Settings → API.
@@ -825,22 +803,49 @@ function setStatus(msg, isErr){
 }
 
 document.getElementById('f_foto').addEventListener('change', function(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  selectedFotoFile = file;
-  fotoMarkedForRemoval = false;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    document.getElementById('fotoPreview').src = ev.target.result;
-    document.getElementById('fotoPreviewWrap').style.display = 'block';
-  };
-  reader.readAsDataURL(file);
+  const files = Array.from(e.target.files || []);
+  files.forEach(file=>{
+    const localIndex = selectedFotoFiles.length;
+    selectedFotoFiles.push(file);
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      addFotoThumb(ev.target.result, null, localIndex);
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = ''; // allow selecting more afterwards without losing previous picks
 });
 
-function clearFoto(){
-  selectedFotoFile = null;
-  fotoMarkedForRemoval = true;
+function addFotoThumb(src, existingUrl, localIndex){
+  document.getElementById('fotoPreviewWrap').style.display = 'block';
+  const grid = document.getElementById('fotoPreviewGrid');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:relative;display:inline-block;';
+  if(existingUrl){ wrap.dataset.kind = 'existing'; wrap.dataset.url = existingUrl; }
+  else { wrap.dataset.kind = 'new'; wrap.dataset.localIndex = localIndex; }
+  wrap.innerHTML = `<img src="${src}" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block;">
+    <button type="button" onclick="removeFotoThumb(this)" style="position:absolute;top:-6px;right:-6px;background:var(--risk);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;">×</button>`;
+  grid.appendChild(wrap);
+}
+
+function removeFotoThumb(btn){
+  const wrap = btn.parentElement;
+  if(wrap.dataset.kind === 'existing'){
+    existingFotoUrls = existingFotoUrls.filter(u => u !== wrap.dataset.url);
+  }else{
+    selectedFotoFiles[Number(wrap.dataset.localIndex)] = null;
+  }
+  wrap.remove();
+  if(!document.getElementById('fotoPreviewGrid').children.length){
+    document.getElementById('fotoPreviewWrap').style.display = 'none';
+  }
+}
+
+function resetFotoState(){
+  selectedFotoFiles = [];
+  existingFotoUrls = [];
   document.getElementById('f_foto').value = '';
+  document.getElementById('fotoPreviewGrid').innerHTML = '';
   document.getElementById('fotoPreviewWrap').style.display = 'none';
 }
 
@@ -848,7 +853,7 @@ async function uploadFoto(id, file){
   if(!supabaseReady) return '';
   try{
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `${id}-${Date.now()}.${ext}`;
+    const path = `${id}-${Date.now()}-${Math.random().toString(36).slice(2,7)}.${ext}`;
     const { error: upErr } = await supabaseClient.storage.from('vileda-fotos').upload(path, file, { upsert: true });
     if(upErr) throw upErr;
     const { data } = supabaseClient.storage.from('vileda-fotos').getPublicUrl(path);
@@ -887,14 +892,13 @@ function toDbRow(e){
     quien_prepara: e.quienPrepara,
     humectacion: e.humectacion,
     humectacion_detalle: e.humectacionDetalle,
-    dosificacion: e.dosificacion,
-    conoce_fibra: e.conoceFibra,
     producto_vasos: e.productoVasos,
     secuencia: e.secuencia,
     secuencia_detalle: e.secuenciaDetalle,
     levantado_por: e.levantadoPor,
     hora: e.hora || null,
-    foto_url: e.fotoUrl || null,
+    foto_url: (e.fotoUrls && e.fotoUrls[0]) || null,
+    foto_urls: e.fotoUrls || [],
     obs: e.obs,
     updated_at: new Date().toISOString()
   };
@@ -928,14 +932,12 @@ function fromDbRow(r){
     quienPrepara: r.quien_prepara || '',
     humectacion: r.humectacion || '',
     humectacionDetalle: r.humectacion_detalle || '',
-    dosificacion: r.dosificacion || '',
-    conoceFibra: r.conoce_fibra || '',
     productoVasos: r.producto_vasos || '',
     secuencia: r.secuencia || '',
     secuenciaDetalle: r.secuencia_detalle || '',
     levantadoPor: r.levantado_por || '',
     hora: r.hora || '',
-    fotoUrl: r.foto_url || '',
+    fotoUrls: (r.foto_urls && r.foto_urls.length) ? r.foto_urls : (r.foto_url ? [r.foto_url] : []),
     obs: r.obs || ''
   };
 }
@@ -1061,8 +1063,6 @@ async function saveEntry(){
     quienPrepara: document.getElementById('f_quienprepara').value,
     humectacion: document.getElementById('f_humectacion').value,
     humectacionDetalle: document.getElementById('f_humectacion_detalle').value.trim(),
-    dosificacion: document.getElementById('f_dosificacion').value,
-    conoceFibra: document.getElementById('f_conocefibra').value,
     productoVasos: document.getElementById('f_productovasos').value.trim(),
     secuencia: document.getElementById('f_secuencia').value,
     secuenciaDetalle: document.getElementById('f_secuencia_detalle').value.trim(),
@@ -1071,17 +1071,19 @@ async function saveEntry(){
     obs: document.getElementById('f_obs').value.trim()
   };
 
-  let fotoUrl = fotoMarkedForRemoval ? '' : editingFotoUrl;
-  if(selectedFotoFile){
-    setStatus('Subiendo foto…');
-    const uploaded = await uploadFoto(entry.id, selectedFotoFile);
-    if(uploaded){
-      fotoUrl = uploaded;
-    }else{
-      setStatus('No se pudo subir la foto (revisa tu conexión). El registro se guardará sin foto.', true);
+  const filesToUpload = selectedFotoFiles.filter(Boolean);
+  let uploadedUrls = [];
+  if(filesToUpload.length){
+    setStatus(`Subiendo ${filesToUpload.length} foto(s)…`);
+    for(const file of filesToUpload){
+      const uploaded = await uploadFoto(entry.id, file);
+      if(uploaded) uploadedUrls.push(uploaded);
+    }
+    if(uploadedUrls.length < filesToUpload.length){
+      setStatus('Algunas fotos no se pudieron subir (revisa tu conexión). El registro se guardará con las que sí subieron.', true);
     }
   }
-  entry.fotoUrl = fotoUrl;
+  entry.fotoUrls = [...existingFotoUrls, ...uploadedUrls];
 
   const ok = await persistEntry(entry);
   if(ok){
@@ -1114,8 +1116,6 @@ function clearForm(){
   document.getElementById('f_quienprepara').value = '';
   document.getElementById('f_humectacion').value = '';
   document.getElementById('f_humectacion_detalle').value = '';
-  document.getElementById('f_dosificacion').value = '';
-  document.getElementById('f_conocefibra').value = '';
   document.getElementById('f_productovasos').value = '';
   document.getElementById('f_secuencia').value = '';
   document.getElementById('f_secuencia_detalle').value = '';
@@ -1127,11 +1127,7 @@ function clearForm(){
   document.getElementById('f_modoseca_detalle').value = '';
   document.getElementById('f_soaperuso_detalle').value = '';
   document.getElementById('soaperUsoWrap').style.display = 'none';
-  document.getElementById('f_foto').value = '';
-  document.getElementById('fotoPreviewWrap').style.display = 'none';
-  selectedFotoFile = null;
-  editingFotoUrl = '';
-  fotoMarkedForRemoval = false;
+  resetFotoState();
   ['f_categoria','f_color','f_soaper','f_supervision','f_fibra','f_pano','f_escoba'].forEach(f=>{
     delete ynState[f];
   });
@@ -1156,8 +1152,6 @@ function editEntry(id){
   document.getElementById('f_quienprepara').value = e.quienPrepara || '';
   document.getElementById('f_humectacion').value = e.humectacion || '';
   document.getElementById('f_humectacion_detalle').value = e.humectacionDetalle || '';
-  document.getElementById('f_dosificacion').value = e.dosificacion || '';
-  document.getElementById('f_conocefibra').value = e.conoceFibra || '';
   document.getElementById('f_productovasos').value = e.productoVasos || '';
   document.getElementById('f_secuencia').value = e.secuencia || '';
   document.getElementById('f_secuencia_detalle').value = e.secuenciaDetalle || '';
@@ -1172,16 +1166,9 @@ function editEntry(id){
   document.querySelectorAll('.c_casosuso').forEach(c=>c.checked = (e.casosUso||[]).includes(c.value));
   document.querySelectorAll('.c_casosusohumeda').forEach(c=>c.checked = (e.casosUsoHumeda||[]).includes(c.value));
   document.getElementById('soaperUsoWrap').style.display = (e.soaper==='si') ? 'block' : 'none';
-  selectedFotoFile = null;
-  fotoMarkedForRemoval = false;
-  editingFotoUrl = e.fotoUrl || '';
-  document.getElementById('f_foto').value = '';
-  if(editingFotoUrl){
-    document.getElementById('fotoPreview').src = editingFotoUrl;
-    document.getElementById('fotoPreviewWrap').style.display = 'block';
-  }else{
-    document.getElementById('fotoPreviewWrap').style.display = 'none';
-  }
+  resetFotoState();
+  existingFotoUrls = [...(e.fotoUrls || [])];
+  existingFotoUrls.forEach(url => addFotoThumb(url, url, null));
   const setBtn = (field,val)=>{
     if(!val) return;
     const wrap = document.getElementById(field+'_yn');
@@ -1288,8 +1275,8 @@ function renderTable(){
       </td>
     </tr>`;
     if(!expanded) return mainRow;
-    const fotoHtml = e.fotoUrl
-      ? `<img src="${e.fotoUrl}" style="max-width:90px;border-radius:6px;border:1px solid var(--line);display:block;margin-top:4px;">`
+    const fotoHtml = (e.fotoUrls && e.fotoUrls.length)
+      ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${e.fotoUrls.map(u=>`<img src="${u}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--line);">`).join('')}</div>`
       : '—';
     const detailRow = `<tr class="detail-row"><td colspan="10">
       <dl class="detail-grid">
@@ -1299,14 +1286,12 @@ function renderTable(){
         <div><dt>Casos de uso de la mopa seca</dt><dd>${(e.casosUso||[]).join(', ')||'—'}</dd></div>
         <div><dt>Casos de uso de la mopa húmeda</dt><dd>${(e.casosUsoHumeda||[]).join(', ')||'—'}</dd></div>
         <div><dt>Cómo limpia la mopa seca para reutilizar</dt><dd>${e.limpiaMopa||'—'}</dd></div>
-        <div><dt>Dosificación de la solución</dt><dd>${e.dosificacion||'—'}</dd></div>
         <div><dt>Quién prepara las mopas</dt><dd>${e.quienPrepara||'—'}</dd></div>
         <div><dt>Autorización de supervisión (Soaper)</dt><dd>${e.supervision==='si'?'Sí':e.supervision==='no'?'No':'—'}</dd></div>
         <div><dt>Detalle adicional (uso del Soaper)</dt><dd>${e.soaperUsoDetalle||'—'}</dd></div>
         <div><dt>Frecuencia declarada (Soaper)</dt><dd>${e.frecuencia||'—'}</dd></div>
         <div><dt>Método de humectación de mopas</dt><dd>${e.humectacion||'—'}</dd></div>
         <div><dt>Detalle adicional (humectación)</dt><dd>${e.humectacionDetalle||'—'}</dd></div>
-        <div><dt>Conocimiento fibra/paño</dt><dd>${e.conoceFibra||'—'}</dd></div>
         <div><dt>Producto químico para vasos</dt><dd>${e.productoVasos||'—'}</dd></div>
         <div><dt>Orden del flujo SOP respetado</dt><dd>${e.secuencia||'—'}</dd></div>
         <div><dt>Detalle adicional (secuencia)</dt><dd>${e.secuenciaDetalle||'—'}</dd></div>
@@ -1479,14 +1464,12 @@ function exportExcel(){
     'Quién prepara las mopas': e.quienPrepara||'',
     'Método de humectación de mopas': e.humectacion||'',
     'Detalle adicional (humectación)': e.humectacionDetalle||'',
-    'Dosificación de la solución': e.dosificacion||'',
-    'Conoce fibra blanca vs. paño blanco': e.conoceFibra||'',
     'Producto químico para vasos': e.productoVasos||'',
     'Orden del flujo SOP respetado': e.secuencia||'',
     'Detalle adicional (secuencia)': e.secuenciaDetalle||'',
     'Levantado por': e.levantadoPor||'',
     'Hora de la visita': e.hora||'',
-    'Foto (URL)': e.fotoUrl||'',
+    'Fotos (URLs)': (e.fotoUrls||[]).join(' | '),
     'Observaciones': e.obs||''
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
@@ -1517,7 +1500,7 @@ function exportPDF(){
       <td class="${riesgo?'pr-risk':''}">${e.soaper==='si'?(riesgo?'Sí — riesgo':'Sí'):'No'}${e.soaper==='si'&&e.soaperUso.length?'<br><span style="font-weight:400;">'+e.soaperUso.join(', ')+'</span>':''}</td>
       <td>${e.fibra==='si'?'Sí':'No'} / ${e.pano==='si'?'Sí':'No'}</td>
       <td>${e.quienPrepara||''}</td>
-      <td>${e.fotoUrl?`<img src="${e.fotoUrl}">`:''}</td>
+      <td>${e.fotoUrls&&e.fotoUrls.length?`<img src="${e.fotoUrls[0]}">${e.fotoUrls.length>1?'<br><span style="font-size:8px;">+'+(e.fotoUrls.length-1)+' más</span>':''}`:''}</td>
     </tr>`;
   }).join('');
 
