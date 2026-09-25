@@ -371,6 +371,7 @@
   .badge.ok{background:var(--ok-bg);color:var(--ok);}
   .badge.risk{background:var(--risk-bg);color:var(--risk);}
   .badge.na{background:#F0EFEA;color:var(--ink-soft);}
+  .badge.info{background:#EAF1F8;color:var(--navy);}
   .row-actions{white-space:nowrap;}
   .row-actions button{
     background:none;border:none;cursor:pointer;
@@ -407,7 +408,7 @@
     <div>
       <div class="eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
       <h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
-      <p>Registro de campo por habitación: dotación de mopas, uso operativo del Soaper/Trapeador, squeegee e implementos para limpieza de vasos.</p>
+      <p>Registro de campo por habitación: dotación de mopas, uso operativo del Soaper/Trapeador e implementos para limpieza de vasos.</p>
     </div>
   </div>
 </header>
@@ -427,11 +428,11 @@
           <label>Hotel</label>
           <select id="f_hotel">
             <option value="">Seleccionar…</option>
-            <option>Dreams Flora</option>
-            <option>Dreams Royal Beach</option>
-            <option>Secrets Royal Beach</option>
-            <option>Dreams Onyx</option>
-            <option>Breathless Punta Cana</option>
+            <option>DRFPC</option>
+            <option>DRRPC</option>
+            <option>SERPC</option>
+            <option>DROPC</option>
+            <option>BREPC</option>
           </select>
         </div>
         <div class="field">
@@ -446,12 +447,16 @@
           <label>Número de habitación</label>
           <input type="text" id="f_habitacion" placeholder="Ej. 214">
         </div>
+      </div>
+
+      <div class="subhead">Dotación de mopas</div>
+      <div class="grid2">
         <div class="field">
           <label>Cantidad de mopas secas</label>
           <input type="number" id="f_secas" min="0" placeholder="0">
         </div>
         <div class="field">
-          <label>Cantidad de mopas mojadas</label>
+          <label>Cantidad de mopas húmedas</label>
           <input type="number" id="f_mojadas" min="0" placeholder="0">
         </div>
       </div>
@@ -461,7 +466,8 @@
           <label>Categoría de habitación</label>
           <div class="yn" id="f_categoria_yn">
             <button type="button" data-val="regular" onclick="setYN('f_categoria',this)">Regular</button>
-            <button type="button" data-val="club" onclick="setYN('f_categoria',this)">Club (Preferred)</button>
+            <button type="button" data-val="preferred" onclick="setYN('f_categoria',this)">Preferred</button>
+            <button type="button" data-val="xhale" onclick="setYN('f_categoria',this)">X-hale</button>
           </div>
         </div>
         <div class="field">
@@ -492,6 +498,7 @@
           <div class="check-row"><input type="checkbox" value="3 - Proceso final de limpieza" class="c_modoseca"> 3 — Proceso final de limpieza (piso)</div>
           <div class="check-row"><input type="checkbox" value="Otro" class="c_modoseca"> Otro</div>
         </fieldset>
+        <textarea id="f_modoseca_detalle" placeholder="Detalle adicional sobre el momento/uso observado (opcional)…" style="margin-top:10px;"></textarea>
       </div>
 
       <div class="field">
@@ -500,6 +507,40 @@
           <button type="button" data-val="si" onclick="setYN('f_escoba',this)">Sí</button>
           <button type="button" data-val="no" onclick="setYN('f_escoba',this)">No</button>
         </div>
+      </div>
+
+      <div class="field">
+        <fieldset>
+          <legend>¿En qué caso se usó la mopa seca en esta habitación? (marcar todo lo observado)</legend>
+          <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria" class="c_casosuso"> Limpieza de rutina diaria</div>
+          <div class="check-row"><input type="checkbox" value="Solicitud especial del huésped" class="c_casosuso"> Solicitud especial del huésped</div>
+          <div class="check-row"><input type="checkbox" value="Derrame / emergencia" class="c_casosuso"> Derrame / emergencia</div>
+          <div class="check-row"><input type="checkbox" value="Inspección programada o auditoría" class="c_casosuso"> Inspección programada o auditoría</div>
+          <div class="check-row"><input type="checkbox" value="Otro" class="c_casosuso"> Otro</div>
+        </fieldset>
+      </div>
+
+      <div class="field">
+        <fieldset>
+          <legend>¿En qué caso se usó la mopa húmeda en esta habitación? (marcar todo lo observado)</legend>
+          <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria" class="c_casosusohumeda"> Limpieza de rutina diaria</div>
+          <div class="check-row"><input type="checkbox" value="Solicitud especial del huésped" class="c_casosusohumeda"> Solicitud especial del huésped</div>
+          <div class="check-row"><input type="checkbox" value="Derrame / emergencia" class="c_casosusohumeda"> Derrame / emergencia</div>
+          <div class="check-row"><input type="checkbox" value="Inspección programada o auditoría" class="c_casosusohumeda"> Inspección programada o auditoría</div>
+          <div class="check-row"><input type="checkbox" value="Otro" class="c_casosusohumeda"> Otro</div>
+        </fieldset>
+      </div>
+
+      <div class="field">
+        <label>¿Cómo limpia la camarista la mopa seca antes de reutilizarla?</label>
+        <select id="f_limpiamopa">
+          <option value="">Seleccionar…</option>
+          <option>La sacude/golpea para quitar el polvo</option>
+          <option>La lava con agua</option>
+          <option>La aspira</option>
+          <option>No la limpia, la reutiliza sucia</option>
+          <option>Otro</option>
+        </select>
       </div>
 
       <div class="field">
@@ -522,6 +563,7 @@
           <div class="check-row flagrisk"><input type="checkbox" value="Habitación regular (uso diario)" class="c_soaperuso"> Habitación regular — limpieza diaria (⚠ fuera del estándar SOP)</div>
           <div class="check-row"><input type="checkbox" value="Otro" class="c_soaperuso"> Otro</div>
         </fieldset>
+        <textarea id="f_soaperuso_detalle" placeholder="Detalle adicional sobre el uso del Soaper (opcional)…" style="margin-top:10px;"></textarea>
         <div class="grid2" style="margin-top:14px;">
           <div class="field" style="margin-bottom:0;">
             <label>¿Autorización de supervisión para su uso?</label>
@@ -541,14 +583,6 @@
               <option>No sabe</option>
             </select>
           </div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>¿Presencia de squeegee en el carro?</label>
-        <div class="yn" id="f_squeegee_yn">
-          <button type="button" data-val="si" onclick="setYN('f_squeegee',this)">Sí</button>
-          <button type="button" data-val="no" onclick="setYN('f_squeegee',this)">No</button>
         </div>
       </div>
 
@@ -579,6 +613,7 @@
             <option>Supervisor(a)</option>
             <option>Ama de llaves de turno</option>
             <option>Personal de lavandería / mopa central</option>
+            <option>Pasillero(a)</option>
             <option>Otro</option>
           </select>
         </div>
@@ -589,8 +624,10 @@
             <option>Solo agua</option>
             <option>Solución multiusos</option>
             <option>Cubo con agua</option>
+            <option>Vaso destinado para los paños</option>
             <option>Otro</option>
           </select>
+          <textarea id="f_humectacion_detalle" placeholder="Detalle adicional sobre la preparación/humectación (opcional)…" style="margin-top:8px;"></textarea>
         </div>
       </div>
       <div class="grid2">
@@ -603,7 +640,17 @@
             <option>Confundido</option>
           </select>
         </div>
-        <div class="field" style="margin-bottom:0;"></div>
+        <div class="field">
+          <label>Dosificación de la solución multiusos</label>
+          <select id="f_dosificacion">
+            <option value="">Seleccionar…</option>
+            <option>Según especificación del fabricante</option>
+            <option>Diluido en exceso (más agua de la indicada)</option>
+            <option>Sobre-concentrado (menos agua de la indicada)</option>
+            <option>No sabe</option>
+            <option>No aplica (solo agua)</option>
+          </select>
+        </div>
       </div>
       <div class="field">
         <label>Producto químico usado para limpieza de vasos</label>
@@ -611,30 +658,23 @@
       </div>
 
       <div class="subhead">Secuencia y condiciones</div>
-      <div class="grid2">
-        <div class="field">
-          <label>¿Secuencia ClickSpeed aplicada correctamente?</label>
-          <select id="f_secuencia">
-            <option value="">Seleccionar…</option>
-            <option>Sí</option>
-            <option>No</option>
-            <option>Parcial</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>¿Mobiliario dificulta el uso de la mopa bajo la cama?</label>
-          <div class="yn" id="f_mobiliario_yn">
-            <button type="button" data-val="si" onclick="setYN('f_mobiliario',this)">Sí</button>
-            <button type="button" data-val="no" onclick="setYN('f_mobiliario',this)">No</button>
-          </div>
-        </div>
+      <div class="field">
+        <label>¿Se respetó el orden del flujo SOP? <span style="font-weight:400;color:var(--ink-soft);">(Barrido inicial → Despolvado con mopa seca → Mopa húmeda → Vasos)</span></label>
+        <select id="f_secuencia">
+          <option value="">Seleccionar…</option>
+          <option>Sí, completo y en el orden correcto</option>
+          <option>Sí, pero fuera de orden</option>
+          <option>Parcial — se omitió algún paso</option>
+          <option>No se respetó el flujo</option>
+        </select>
+        <textarea id="f_secuencia_detalle" placeholder="Detalle adicional sobre la secuencia observada (opcional)…" style="margin-top:8px;"></textarea>
       </div>
 
       <div class="subhead">Trazabilidad de la visita</div>
       <div class="grid2">
         <div class="field">
           <label>Levantado por</label>
-          <input type="text" id="f_levantadopor" placeholder="Nombre de quien captura el dato">
+          <input type="text" id="f_levantadopor" placeholder="Nombre de quien captura el dato" value="Erika Quispe">
         </div>
         <div class="field">
           <label>Hora de la visita</label>
@@ -726,7 +766,7 @@
 <div id="printReport" class="print-only"></div>
 
 <script>
-const HOTELS = ["Dreams Flora","Dreams Royal Beach","Secrets Royal Beach","Dreams Onyx","Breathless Punta Cana"];
+const HOTELS = ["DRFPC","DRRPC","SERPC","DROPC","BREPC"];
 let entries = [];
 let editingId = null;
 let activeTab = "Todos";
@@ -832,20 +872,26 @@ function toDbRow(e){
     mojadas: e.mojadas !== '' ? Number(e.mojadas) : null,
     color_cod: e.colorCod,
     modo_seca: e.modoSeca || [],
+    modo_seca_detalle: e.modoSecaDetalle,
     escoba_barrido: e.escobaBarrido,
+    casos_uso: e.casosUso || [],
+    casos_uso_humeda: e.casosUsoHumeda || [],
+    limpia_mopa: e.limpiaMopa,
     soaper: e.soaper,
     soaper_uso: e.soaperUso || [],
+    soaper_uso_detalle: e.soaperUsoDetalle,
     supervision: e.supervision,
     frecuencia: e.frecuencia,
-    squeegee: e.squeegee,
     fibra: e.fibra,
     pano: e.pano,
     quien_prepara: e.quienPrepara,
     humectacion: e.humectacion,
+    humectacion_detalle: e.humectacionDetalle,
+    dosificacion: e.dosificacion,
     conoce_fibra: e.conoceFibra,
     producto_vasos: e.productoVasos,
     secuencia: e.secuencia,
-    mobiliario: e.mobiliario,
+    secuencia_detalle: e.secuenciaDetalle,
     levantado_por: e.levantadoPor,
     hora: e.hora || null,
     foto_url: e.fotoUrl || null,
@@ -867,20 +913,26 @@ function fromDbRow(r){
     mojadas: r.mojadas != null ? String(r.mojadas) : '0',
     colorCod: r.color_cod || '',
     modoSeca: r.modo_seca || [],
+    modoSecaDetalle: r.modo_seca_detalle || '',
     escobaBarrido: r.escoba_barrido || '',
+    casosUso: r.casos_uso || [],
+    casosUsoHumeda: r.casos_uso_humeda || [],
+    limpiaMopa: r.limpia_mopa || '',
     soaper: r.soaper || '',
     soaperUso: r.soaper_uso || [],
+    soaperUsoDetalle: r.soaper_uso_detalle || '',
     supervision: r.supervision || '',
     frecuencia: r.frecuencia || '',
-    squeegee: r.squeegee || '',
     fibra: r.fibra || '',
     pano: r.pano || '',
     quienPrepara: r.quien_prepara || '',
     humectacion: r.humectacion || '',
+    humectacionDetalle: r.humectacion_detalle || '',
+    dosificacion: r.dosificacion || '',
     conoceFibra: r.conoce_fibra || '',
     productoVasos: r.producto_vasos || '',
     secuencia: r.secuencia || '',
-    mobiliario: r.mobiliario || '',
+    secuenciaDetalle: r.secuencia_detalle || '',
     levantadoPor: r.levantado_por || '',
     hora: r.hora || '',
     fotoUrl: r.foto_url || '',
@@ -994,20 +1046,26 @@ async function saveEntry(){
     mojadas: document.getElementById('f_mojadas').value || '0',
     colorCod: ynState['f_color'] || '',
     modoSeca: getChecked('c_modoseca'),
+    modoSecaDetalle: document.getElementById('f_modoseca_detalle').value.trim(),
     escobaBarrido: ynState['f_escoba'] || '',
+    casosUso: getChecked('c_casosuso'),
+    casosUsoHumeda: getChecked('c_casosusohumeda'),
+    limpiaMopa: document.getElementById('f_limpiamopa').value,
     soaper: ynState['f_soaper'] || '',
     soaperUso: getChecked('c_soaperuso'),
+    soaperUsoDetalle: document.getElementById('f_soaperuso_detalle').value.trim(),
     supervision: ynState['f_supervision'] || '',
     frecuencia: document.getElementById('f_frecuencia').value,
-    squeegee: ynState['f_squeegee'] || '',
     fibra: ynState['f_fibra'] || '',
     pano: ynState['f_pano'] || '',
     quienPrepara: document.getElementById('f_quienprepara').value,
     humectacion: document.getElementById('f_humectacion').value,
+    humectacionDetalle: document.getElementById('f_humectacion_detalle').value.trim(),
+    dosificacion: document.getElementById('f_dosificacion').value,
     conoceFibra: document.getElementById('f_conocefibra').value,
     productoVasos: document.getElementById('f_productovasos').value.trim(),
     secuencia: document.getElementById('f_secuencia').value,
-    mobiliario: ynState['f_mobiliario'] || '',
+    secuenciaDetalle: document.getElementById('f_secuencia_detalle').value.trim(),
     levantadoPor: document.getElementById('f_levantadopor').value.trim(),
     hora: document.getElementById('f_hora').value,
     obs: document.getElementById('f_obs').value.trim()
@@ -1055,20 +1113,26 @@ function clearForm(){
   document.getElementById('f_frecuencia').value = '';
   document.getElementById('f_quienprepara').value = '';
   document.getElementById('f_humectacion').value = '';
+  document.getElementById('f_humectacion_detalle').value = '';
+  document.getElementById('f_dosificacion').value = '';
   document.getElementById('f_conocefibra').value = '';
   document.getElementById('f_productovasos').value = '';
   document.getElementById('f_secuencia').value = '';
-  document.getElementById('f_levantadopor').value = '';
+  document.getElementById('f_secuencia_detalle').value = '';
+  document.getElementById('f_limpiamopa').value = '';
+  document.getElementById('f_levantadopor').value = 'Erika Quispe';
   document.getElementById('f_hora').value = '';
   document.getElementById('f_obs').value = '';
-  document.querySelectorAll('.c_modoseca, .c_soaperuso').forEach(c=>c.checked=false);
+  document.querySelectorAll('.c_modoseca, .c_soaperuso, .c_casosuso, .c_casosusohumeda').forEach(c=>c.checked=false);
+  document.getElementById('f_modoseca_detalle').value = '';
+  document.getElementById('f_soaperuso_detalle').value = '';
   document.getElementById('soaperUsoWrap').style.display = 'none';
   document.getElementById('f_foto').value = '';
   document.getElementById('fotoPreviewWrap').style.display = 'none';
   selectedFotoFile = null;
   editingFotoUrl = '';
   fotoMarkedForRemoval = false;
-  ['f_categoria','f_color','f_soaper','f_supervision','f_squeegee','f_fibra','f_pano','f_mobiliario','f_escoba'].forEach(f=>{
+  ['f_categoria','f_color','f_soaper','f_supervision','f_fibra','f_pano','f_escoba'].forEach(f=>{
     delete ynState[f];
   });
   document.querySelectorAll('.yn button').forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
@@ -1091,14 +1155,22 @@ function editEntry(id){
   document.getElementById('f_frecuencia').value = e.frecuencia || '';
   document.getElementById('f_quienprepara').value = e.quienPrepara || '';
   document.getElementById('f_humectacion').value = e.humectacion || '';
+  document.getElementById('f_humectacion_detalle').value = e.humectacionDetalle || '';
+  document.getElementById('f_dosificacion').value = e.dosificacion || '';
   document.getElementById('f_conocefibra').value = e.conoceFibra || '';
   document.getElementById('f_productovasos').value = e.productoVasos || '';
   document.getElementById('f_secuencia').value = e.secuencia || '';
-  document.getElementById('f_levantadopor').value = e.levantadoPor || '';
+  document.getElementById('f_secuencia_detalle').value = e.secuenciaDetalle || '';
+  document.getElementById('f_limpiamopa').value = e.limpiaMopa || '';
+  document.getElementById('f_levantadopor').value = e.levantadoPor || 'Erika Quispe';
   document.getElementById('f_hora').value = e.hora || '';
   document.getElementById('f_obs').value = e.obs || '';
   document.querySelectorAll('.c_modoseca').forEach(c=>c.checked = e.modoSeca.includes(c.value));
+  document.getElementById('f_modoseca_detalle').value = e.modoSecaDetalle || '';
   document.querySelectorAll('.c_soaperuso').forEach(c=>c.checked = (e.soaperUso||[]).includes(c.value));
+  document.getElementById('f_soaperuso_detalle').value = e.soaperUsoDetalle || '';
+  document.querySelectorAll('.c_casosuso').forEach(c=>c.checked = (e.casosUso||[]).includes(c.value));
+  document.querySelectorAll('.c_casosusohumeda').forEach(c=>c.checked = (e.casosUsoHumeda||[]).includes(c.value));
   document.getElementById('soaperUsoWrap').style.display = (e.soaper==='si') ? 'block' : 'none';
   selectedFotoFile = null;
   fotoMarkedForRemoval = false;
@@ -1125,10 +1197,8 @@ function editEntry(id){
   setBtn('f_escoba', e.escobaBarrido);
   setBtn('f_soaper', e.soaper);
   setBtn('f_supervision', e.supervision);
-  setBtn('f_squeegee', e.squeegee);
   setBtn('f_fibra', e.fibra);
   setBtn('f_pano', e.pano);
-  setBtn('f_mobiliario', e.mobiliario);
   editingId = id;
   document.getElementById('formTitle').textContent = 'Editando registro — Hab. ' + e.habitacion;
   document.getElementById('saveBtn').textContent = 'Actualizar registro';
@@ -1196,11 +1266,10 @@ function renderTable(){
     const soaperBadge = e.soaper==='si'
       ? `<span class="badge ${riesgo?'risk':'ok'}">${riesgo?'Sí — riesgo':'Sí'}</span>`
       : `<span class="badge na">No</span>`;
-    const sq = e.squeegee==='si' ? `<span class="badge ok">Sí</span>` : e.squeegee==='no' ? `<span class="badge na">No</span>` : '—';
     const vasos = (e.fibra==='si' && e.pano==='si') ? `<span class="badge ok">Completo</span>`
       : (e.fibra==='si' || e.pano==='si') ? `<span class="badge risk">Parcial</span>`
       : `<span class="badge na">No</span>`;
-    const catBadge = e.categoria==='club' ? `<span class="badge ok">Club</span>` : e.categoria==='regular' ? `<span class="badge na">Regular</span>` : '—';
+    const catBadge = e.categoria==='preferred' ? `<span class="badge ok">Preferred</span>` : e.categoria==='xhale' ? `<span class="badge info">X-hale</span>` : e.categoria==='regular' ? `<span class="badge na">Regular</span>` : '—';
     const expanded = expandedIds.has(e.id);
     const mainRow = `<tr>
       <td>${e.fecha||''}</td>
@@ -1211,7 +1280,6 @@ function renderTable(){
       <td>${e.secas} seca / ${e.mojadas} moj.</td>
       <td>${(e.modoSeca||[]).join(', ')||'—'}</td>
       <td>${soaperBadge}${e.soaper==='si' && e.soaperUso.length ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">${e.soaperUso.join(', ')}</div>` : ''}</td>
-      <td>${sq}</td>
       <td>${vasos}</td>
       <td class="row-actions">
         <button class="toggle-detail" onclick="toggleDetail('${e.id}')">${expanded?'Ocultar':'Detalle'}</button>
@@ -1223,18 +1291,25 @@ function renderTable(){
     const fotoHtml = e.fotoUrl
       ? `<img src="${e.fotoUrl}" style="max-width:90px;border-radius:6px;border:1px solid var(--line);display:block;margin-top:4px;">`
       : '—';
-    const detailRow = `<tr class="detail-row"><td colspan="11">
+    const detailRow = `<tr class="detail-row"><td colspan="10">
       <dl class="detail-grid">
         <div><dt>Estado de habitación</dt><dd>${e.estado||'—'}</dd></div>
         <div><dt>Escoba en barrido inicial obligatorio</dt><dd>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':'—'}</dd></div>
+        <div><dt>Detalle adicional (momento/uso mopa seca)</dt><dd>${e.modoSecaDetalle||'—'}</dd></div>
+        <div><dt>Casos de uso de la mopa seca</dt><dd>${(e.casosUso||[]).join(', ')||'—'}</dd></div>
+        <div><dt>Casos de uso de la mopa húmeda</dt><dd>${(e.casosUsoHumeda||[]).join(', ')||'—'}</dd></div>
+        <div><dt>Cómo limpia la mopa seca para reutilizar</dt><dd>${e.limpiaMopa||'—'}</dd></div>
+        <div><dt>Dosificación de la solución</dt><dd>${e.dosificacion||'—'}</dd></div>
         <div><dt>Quién prepara las mopas</dt><dd>${e.quienPrepara||'—'}</dd></div>
         <div><dt>Autorización de supervisión (Soaper)</dt><dd>${e.supervision==='si'?'Sí':e.supervision==='no'?'No':'—'}</dd></div>
+        <div><dt>Detalle adicional (uso del Soaper)</dt><dd>${e.soaperUsoDetalle||'—'}</dd></div>
         <div><dt>Frecuencia declarada (Soaper)</dt><dd>${e.frecuencia||'—'}</dd></div>
         <div><dt>Método de humectación de mopas</dt><dd>${e.humectacion||'—'}</dd></div>
+        <div><dt>Detalle adicional (humectación)</dt><dd>${e.humectacionDetalle||'—'}</dd></div>
         <div><dt>Conocimiento fibra/paño</dt><dd>${e.conoceFibra||'—'}</dd></div>
         <div><dt>Producto químico para vasos</dt><dd>${e.productoVasos||'—'}</dd></div>
-        <div><dt>Secuencia ClickSpeed correcta</dt><dd>${e.secuencia||'—'}</dd></div>
-        <div><dt>Mobiliario dificulta mopa bajo cama</dt><dd>${e.mobiliario==='si'?'Sí':e.mobiliario==='no'?'No':'—'}</dd></div>
+        <div><dt>Orden del flujo SOP respetado</dt><dd>${e.secuencia||'—'}</dd></div>
+        <div><dt>Detalle adicional (secuencia)</dt><dd>${e.secuenciaDetalle||'—'}</dd></div>
         <div><dt>Levantado por</dt><dd>${e.levantadoPor||'—'}</dd></div>
         <div><dt>Hora de la visita</dt><dd>${e.hora||'—'}</dd></div>
         <div><dt>Foto</dt><dd>${fotoHtml}</dd></div>
@@ -1247,7 +1322,7 @@ function renderTable(){
   wrap.innerHTML = `<table>
     <thead><tr>
       <th>Fecha</th><th>Hotel</th><th>Categoría</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
-      <th>Modo mopa seca</th><th>Soaper</th><th>Squeegee</th><th>Vasos</th><th></th>
+      <th>Modo mopa seca</th><th>Soaper</th><th>Vasos</th><th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -1258,20 +1333,18 @@ function renderSummary(){
   const riesgoCount = entries.filter(isRiesgo).length;
   const avgSecas = total ? (entries.reduce((s,e)=>s+Number(e.secas||0),0)/total).toFixed(1) : '0';
   const avgMojadas = total ? (entries.reduce((s,e)=>s+Number(e.mojadas||0),0)/total).toFixed(1) : '0';
-  const squeegeePct = total ? Math.round(100*entries.filter(e=>e.squeegee==='si').length/total) : 0;
   const vasosPct = total ? Math.round(100*entries.filter(e=>e.fibra==='si' && e.pano==='si').length/total) : 0;
 
   document.getElementById('summaryCards').innerHTML = `
     <div class="card"><div class="num">${total}</div><div class="lbl">Habitaciones registradas</div></div>
     <div class="card ${riesgoCount?'risk':''}"><div class="num">${riesgoCount}</div><div class="lbl">Uso de Soaper fuera de estándar</div></div>
-    <div class="card"><div class="num">${avgSecas} / ${avgMojadas}</div><div class="lbl">Promedio mopas secas / mojadas</div></div>
-    <div class="card"><div class="num">${squeegeePct}%</div><div class="lbl">Carros con squeegee</div></div>
+    <div class="card"><div class="num">${avgSecas} / ${avgMojadas}</div><div class="lbl">Promedio mopas secas / húmedas</div></div>
     <div class="card"><div class="num">${vasosPct}%</div><div class="lbl">Kit de vasos completo (fibra + paño)</div></div>
   `;
 }
 
 function shortHotelLabel(h){
-  return h.replace('Punta Cana','P.C.').replace('Royal Beach','R.B.');
+  return h;
 }
 
 function buildHBarChart(containerId, rows, opts={}){
@@ -1338,20 +1411,21 @@ function renderCharts(){
     return;
   }
 
-  const navy = '#1F3864', gold = '#B08D3E', risk = '#B3261E';
+  const navy = '#1F3864', gold = '#B08D3E', risk = '#B3261E', steel = '#6B8CA3';
   const byHotel = h => entries.filter(e=>e.hotel===h);
 
   buildHBarChart('chartHabitaciones',
     HOTELS.map(h => ({ label: shortHotelLabel(h), segments: [{ value: byHotel(h).length, color: gold }] }))
   );
 
-  renderLegend('chartCategoriaLegend', [{color:navy,label:'Regular'},{color:gold,label:'Club (Preferred)'}]);
+  renderLegend('chartCategoriaLegend', [{color:navy,label:'Regular'},{color:gold,label:'Preferred'},{color:steel,label:'X-hale'}]);
   buildHBarChart('chartCategoria',
     HOTELS.map(h => ({
       label: shortHotelLabel(h),
       segments: [
         { value: byHotel(h).filter(e=>e.categoria==='regular').length, color: navy },
-        { value: byHotel(h).filter(e=>e.categoria==='club').length, color: gold }
+        { value: byHotel(h).filter(e=>e.categoria==='preferred').length, color: gold },
+        { value: byHotel(h).filter(e=>e.categoria==='xhale').length, color: steel }
       ]
     }))
   );
@@ -1381,29 +1455,35 @@ function exportExcel(){
   const rows = entries.map(e=>({
     'Fecha': e.fecha,
     'Hotel': e.hotel,
-    'Categoría de habitación': e.categoria==='club'?'Club (Preferred)':e.categoria==='regular'?'Regular':'',
+    'Categoría de habitación': e.categoria==='preferred'?'Preferred':e.categoria==='xhale'?'X-hale':e.categoria==='regular'?'Regular':'',
     'Estado de habitación': e.estado||'',
     'Camarista': e.camarista,
     'Habitación': e.habitacion,
     'Mopas secas': e.secas,
-    'Mopas mojadas': e.mojadas,
+    'Mopas húmedas': e.mojadas,
     'Mopas codificadas por color': e.colorCod==='si'?'Sí':e.colorCod==='no'?'No':'',
     'Modo de uso mopa seca': (e.modoSeca||[]).join(' | '),
+    'Detalle adicional del momento/uso': e.modoSecaDetalle||'',
     'Escoba en barrido inicial obligatorio': e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':'',
+    'Casos de uso de la mopa seca': (e.casosUso||[]).join(' | '),
+    'Casos de uso de la mopa húmeda': (e.casosUsoHumeda||[]).join(' | '),
+    'Cómo limpia la mopa seca para reutilizar': e.limpiaMopa||'',
     'Uso de Soaper': e.soaper==='si'?'Sí':e.soaper==='no'?'No':'',
     'Para qué se usó el Soaper': (e.soaperUso||[]).join(' | '),
+    'Detalle adicional (uso del Soaper)': e.soaperUsoDetalle||'',
     'Autorización de supervisión (Soaper)': e.supervision==='si'?'Sí':e.supervision==='no'?'No':'',
     'Frecuencia declarada (Soaper)': e.frecuencia||'',
     'Fuera de estándar SOP': isRiesgo(e)?'SÍ - RIESGO':'',
-    'Squeegee presente': e.squeegee==='si'?'Sí':e.squeegee==='no'?'No':'',
     'Fibra blanca': e.fibra==='si'?'Sí':e.fibra==='no'?'No':'',
     'Paño blanco': e.pano==='si'?'Sí':e.pano==='no'?'No':'',
     'Quién prepara las mopas': e.quienPrepara||'',
     'Método de humectación de mopas': e.humectacion||'',
+    'Detalle adicional (humectación)': e.humectacionDetalle||'',
+    'Dosificación de la solución': e.dosificacion||'',
     'Conoce fibra blanca vs. paño blanco': e.conoceFibra||'',
     'Producto químico para vasos': e.productoVasos||'',
-    'Secuencia ClickSpeed correcta': e.secuencia||'',
-    'Mobiliario dificulta mopa bajo cama': e.mobiliario==='si'?'Sí':e.mobiliario==='no'?'No':'',
+    'Orden del flujo SOP respetado': e.secuencia||'',
+    'Detalle adicional (secuencia)': e.secuenciaDetalle||'',
     'Levantado por': e.levantadoPor||'',
     'Hora de la visita': e.hora||'',
     'Foto (URL)': e.fotoUrl||'',
@@ -1428,14 +1508,13 @@ function exportPDF(){
     return `<tr>
       <td>${e.fecha||''}</td>
       <td>${e.hotel}</td>
-      <td>${e.categoria==='club'?'Club':e.categoria==='regular'?'Regular':''}</td>
+      <td>${e.categoria==='preferred'?'Preferred':e.categoria==='xhale'?'X-hale':e.categoria==='regular'?'Regular':''}</td>
       <td>${e.camarista}</td>
       <td>${e.habitacion}</td>
       <td>${e.secas}s / ${e.mojadas}m</td>
       <td>${(e.modoSeca||[]).join(', ')}</td>
       <td>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':''}</td>
       <td class="${riesgo?'pr-risk':''}">${e.soaper==='si'?(riesgo?'Sí — riesgo':'Sí'):'No'}${e.soaper==='si'&&e.soaperUso.length?'<br><span style="font-weight:400;">'+e.soaperUso.join(', ')+'</span>':''}</td>
-      <td>${e.squeegee==='si'?'Sí':e.squeegee==='no'?'No':''}</td>
       <td>${e.fibra==='si'?'Sí':'No'} / ${e.pano==='si'?'Sí':'No'}</td>
       <td>${e.quienPrepara||''}</td>
       <td>${e.fotoUrl?`<img src="${e.fotoUrl}">`:''}</td>
@@ -1456,7 +1535,7 @@ function exportPDF(){
     <table>
       <thead><tr>
         <th>Fecha</th><th>Hotel</th><th>Categ.</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
-        <th>Modo mopa seca</th><th>Escoba</th><th>Soaper</th><th>Squeegee</th><th>Fibra/Paño</th><th>Prepara mopas</th><th>Foto</th>
+        <th>Modo mopa seca</th><th>Escoba</th><th>Soaper</th><th>Fibra/Paño</th><th>Prepara mopas</th><th>Foto</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
