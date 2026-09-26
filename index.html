@@ -466,6 +466,15 @@
         </div>
       </div>
 
+      <div class="field">
+        <label>Turno / Perfil de la camarista</label>
+        <div class="yn" id="f_turno_yn">
+          <button type="button" data-val="diurna" onclick="setYN('f_turno',this)">Diurna</button>
+          <button type="button" data-val="nocturna" onclick="setYN('f_turno',this)">Nocturna</button>
+        </div>
+        <div id="dotacionHint" style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Selecciona el turno para ver la dotación estándar del SOP.</div>
+      </div>
+
       <div class="subhead">Dotación de mopas</div>
       <div class="grid2">
         <div class="field">
@@ -872,6 +881,21 @@ function setYN(field, btn){
   if(field === 'f_soaper'){
     document.getElementById('soaperUsoWrap').style.display = (btn.dataset.val === 'si') ? 'block' : 'none';
   }
+  if(field === 'f_turno'){
+    updateDotacionHint(btn.dataset.val);
+  }
+}
+
+function updateDotacionHint(val){
+  const hint = document.getElementById('dotacionHint');
+  if(!hint) return;
+  if(val === 'diurna'){
+    hint.textContent = 'Estándar SOP (turno diurno): 19 mopas húmedas + 4 mopas secas = 23 mopas.';
+  } else if(val === 'nocturna'){
+    hint.textContent = 'Estándar SOP (turno nocturno): 10 mopas húmedas + 10 mopas secas = 20 mopas.';
+  } else {
+    hint.textContent = 'Selecciona el turno para ver la dotación estándar del SOP.';
+  }
 }
 
 function getChecked(cls){
@@ -1126,6 +1150,7 @@ async function saveEntry(){
     fecha: document.getElementById('f_fecha').value,
     camarista,
     habitacion,
+    turno: ynState['f_turno'] || '',
     categoria: ynState['f_categoria'] || '',
     estado: document.getElementById('f_estado').value,
     secas: document.getElementById('f_secas').value || '0',
@@ -1213,10 +1238,11 @@ function clearForm(){
   document.getElementById('f_soaperuso_detalle').value = '';
   document.getElementById('soaperUsoWrap').style.display = 'none';
   resetFotoState();
-  ['f_categoria','f_color','f_soaper','f_supervision','f_fibra','f_pano','f_escoba'].forEach(f=>{
+  ['f_categoria','f_color','f_soaper','f_supervision','f_fibra','f_pano','f_escoba','f_turno'].forEach(f=>{
     delete ynState[f];
   });
   document.querySelectorAll('.yn button').forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
+  updateDotacionHint('');
   editingId = null;
   document.getElementById('formTitle').textContent = 'Nuevo registro de habitación';
   document.getElementById('saveBtn').textContent = 'Guardar registro';
@@ -1264,6 +1290,8 @@ function editEntry(id){
       btn.classList.add(val==='si'?'active-yes':val==='no'?'active-no':'active-neutral');
     }
   };
+  setBtn('f_turno', e.turno);
+  updateDotacionHint(e.turno || '');
   setBtn('f_categoria', e.categoria);
   setBtn('f_color', e.colorCod);
   setBtn('f_escoba', e.escobaBarrido);
@@ -1346,9 +1374,11 @@ function renderTable(){
       : `<span class="badge na">No</span>`;
     const catBadge = e.categoria==='preferred' ? `<span class="badge ok">Preferred</span>` : e.categoria==='xhale' ? `<span class="badge info">X-hale</span>` : e.categoria==='regular' ? `<span class="badge na">Regular</span>` : '—';
     const expanded = expandedIds.has(e.id);
+    const turnoBadge = e.turno==='nocturna' ? `<span class="badge info">Nocturna</span>` : e.turno==='diurna' ? `<span class="badge na">Diurna</span>` : '—';
     const mainRow = `<tr>
       <td>${e.fecha||''}</td>
       <td>${e.hotel}</td>
+      <td>${turnoBadge}</td>
       <td>${catBadge}</td>
       <td>${e.camarista}</td>
       <td>${e.habitacion}</td>
@@ -1366,7 +1396,7 @@ function renderTable(){
     const fotoHtml = (e.fotoUrls && e.fotoUrls.length)
       ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${e.fotoUrls.map(u=>`<img src="${u}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--line);">`).join('')}</div>`
       : '—';
-    const detailRow = `<tr class="detail-row"><td colspan="10">
+    const detailRow = `<tr class="detail-row"><td colspan="11">
       <dl class="detail-grid">
         <div><dt>Estado de habitación</dt><dd>${e.estado||'—'}</dd></div>
         <div><dt>Escoba en barrido inicial obligatorio</dt><dd>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':'—'}</dd></div>
@@ -1394,7 +1424,7 @@ function renderTable(){
 
   wrap.innerHTML = `<table>
     <thead><tr>
-      <th>Fecha</th><th>Hotel</th><th>Categoría</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
+      <th>Fecha</th><th>Hotel</th><th>Turno</th><th>Categoría</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
       <th>Modo mopa seca</th><th>Soaper</th><th>Vasos</th><th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
@@ -1583,6 +1613,7 @@ function exportPDF(){
     return `<tr>
       <td>${e.fecha||''}</td>
       <td>${e.hotel}</td>
+      <td>${e.turno==='nocturna'?'Nocturna':e.turno==='diurna'?'Diurna':''}</td>
       <td>${e.categoria==='preferred'?'Preferred':e.categoria==='xhale'?'X-hale':e.categoria==='regular'?'Regular':''}</td>
       <td>${e.camarista}</td>
       <td>${e.habitacion}</td>
@@ -1610,7 +1641,7 @@ function exportPDF(){
     </div>
     <table>
       <thead><tr>
-        <th>Fecha</th><th>Hotel</th><th>Categ.</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
+        <th>Fecha</th><th>Hotel</th><th>Turno</th><th>Categ.</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
         <th>Modo mopa seca</th><th>Escoba</th><th>Soaper</th><th>Fibra/Paño</th><th>Prepara mopas</th><th>Foto</th>
       </tr></thead>
       <tbody>${rows}</tbody>
