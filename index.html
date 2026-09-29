@@ -454,7 +454,6 @@
             <option value="SDQCT">SDQCT — Hyatt Centric Santo Domingo</option>
             <option value="PUJJD">PUJJD — JdV Royal Beach</option>
             <option value="DRJRC">DRJRC — Dreams Jade</option>
-            <option value="TBI">TBI — Garden Inn by Hilton</option>
           </select>
         </div>
         <div class="field">
@@ -776,7 +775,7 @@
 <div id="printReport" class="print-only"></div>
 
 <script>
-const HOTELS = ["DRFPC","DRRPC","SERPC","DROPC","BREPC","SEAUA","SDQCT","PUJJD","DRJRC","TBI"];
+const HOTELS = ["DRFPC","DRRPC","SERPC","DROPC","BREPC","SEAUA","SDQCT","PUJJD","DRJRC"];
 let entries = [];
 let editingId = null;
 let activeTab = "Todos";
@@ -895,11 +894,11 @@ function updateDotacionHint(val){
   const hint = document.getElementById('dotacionHint');
   if(!hint) return;
   if(val === 'diurna'){
-    hint.textContent = 'Estándar SOP (turno diurno): 19 mopas húmedas + 4 mopas secas = 23 mopas.';
+    hint.textContent = 'Estándar SOP (turno diurno): 19 mopas húmedas + 4 mopas secas = 23 mopas. Solución: 2 litros de agua + 10 gatillazos.';
   } else if(val === 'nocturna'){
-    hint.textContent = 'Estándar SOP (turno nocturno): 10 mopas húmedas + 10 mopas secas = 20 mopas.';
+    hint.textContent = 'Estándar SOP (turno nocturno): 20 mopas (10 húmedas + 10 secas). Solución: 1 litro de agua + 10 gatillazos.';
   } else {
-    hint.textContent = 'Selecciona el turno para ver la dotación estándar del SOP.';
+    hint.textContent = 'Selecciona el turno para ver la dotación y solución estándar del SOP.';
   }
 }
 
