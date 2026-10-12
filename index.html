@@ -765,6 +765,10 @@
       <div class="subhead">Criterios que puntúan</div>
       <div id="sopConfig" class="sop-config"></div>
       <div id="sopHotels" class="table-wrap"></div>
+      <div style="margin:16px 0 4px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button type="button" onclick="sopExportPlatform()" style="background:var(--navy);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;">Generar evaluación para la plataforma</button>
+        <span style="font-size:12.5px;color:var(--ink-soft);">Baja un archivo con una evaluación de Vileda Ama de llaves por hotel. En la plataforma, usa “Agregar evaluaciones desde archivo” en la pestaña 7.</span>
+      </div>
       <div class="subhead" style="margin-top:18px;">Detalle por criterio y hotel</div>
       <div id="sopMatrix" class="table-wrap sop-matrix"></div>
     </div>
@@ -1497,16 +1501,21 @@ function renderSummary(){
 const SOP_TARGET_MIN = 20, SOP_TARGET_MAX = 30;
 const SOP_STORE_KEY = 'vileda_sop_enabled_v1';
 const SOP_CRITERIA = [
-  { id:'dotacion', pilar:'Pilar 3 – Infraestructura y Equipamiento', on:true,
-    label:'Dotación de mopas conforme al perfil de la camarista (SOP 5.6)',
+  { id:'dotacion_diurna', pilar:'Pilar 3', on:true, tpl:[2,0],
+    label:'Dotación diurna: 19 mopas húmedas + 4 secas (SOP 5.6)',
     fn:e=>{
       const h=Number(e.mojadas||0), s=Number(e.secas||0);
-      if(!e.turno || (h===0 && s===0)) return null;
-      if(e.turno==='diurna'){ if(h>=19 && s>=4) return 100; if(h+s>=23) return 50; return 0; }
-      if(e.turno==='nocturna'){ if(h>=10 && s>=10) return 100; if(h+s>=20) return 50; return 0; }
-      return null;
+      if(e.turno!=='diurna' || (h===0 && s===0)) return null;
+      if(h>=19 && s>=4) return 100; if(h+s>=23) return 50; return 0;
     }},
-  { id:'humectacion', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+  { id:'dotacion_nocturna', pilar:'Pilar 3', on:true, tpl:[2,1],
+    label:'Dotación nocturna: 10 mopas húmedas + 10 secas (SOP 5.6)',
+    fn:e=>{
+      const h=Number(e.mojadas||0), s=Number(e.secas||0);
+      if(e.turno!=='nocturna' || (h===0 && s===0)) return null;
+      if(h>=10 && s>=10) return 100; if(h+s>=20) return 50; return 0;
+    }},
+  { id:'humectacion', pilar:'Pilar 1', on:true, tpl:[0,0],
     label:'Preparación de la mopa: 10 gatillazos de multiusos en 2 L de agua (SOP 5.2)',
     fn:e=>{
       const v=e.humectacion||'';
@@ -1515,10 +1524,10 @@ const SOP_CRITERIA = [
       if(v==='Solución multiusos') return 50;
       return 0;
     }},
-  { id:'barrido', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+  { id:'barrido', pilar:'Pilar 1', on:true, tpl:[0,2],
     label:'Barrido previo con escoba antes de mopear (SOP 5.10)',
     fn:e=> e.escobaBarrido==='si'?100 : e.escobaBarrido==='no'?0 : null },
-  { id:'secuencia', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+  { id:'secuencia', pilar:'Pilar 1', on:true, tpl:[0,9],
     label:'Secuencia barrido, mopa húmeda y mopa seca (SOP 5.10)',
     fn:e=>{
       const v=e.secuencia||'';
@@ -1528,9 +1537,18 @@ const SOP_CRITERIA = [
       if(v.indexOf('No se respet')===0) return 0;
       return null;
     }},
-  { id:'trapeador', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
-    label:'Trapeador / Soaper restringido y autorizado por supervisión (SOP 5.8 y 5.9)',
-    fn:e=> e.soaper==='no'?100 : e.soaper==='si'?(isRiesgo(e)?0:100) : null },
+  { id:'trapeador_uso', pilar:'Pilar 1', on:true, tpl:[0,6],
+    label:'Trapeador / Soaper solo en limpieza profunda o casos autorizados, no como reemplazo del mopeado diario (SOP 5.8)',
+    fn:e=>{
+      if(e.soaper==='no') return 100;
+      if(e.soaper!=='si') return null;
+      const regular = e.soaperUso && e.soaperUso.includes('Habitación regular (uso diario)');
+      const alta = e.frecuencia==='Diario' || e.frecuencia==='Semanal';
+      return (regular || alta) ? 0 : 100;
+    }},
+  { id:'trapeador_auth', pilar:'Pilar 1', on:true, tpl:[0,7],
+    label:'Uso del trapeador / Soaper con autorización de la supervisora (SOP 5.9)',
+    fn:e=> e.soaper==='si' ? (e.supervision==='no'?0 : e.supervision==='si'?100 : null) : null },
   { id:'color', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:false, nosop:true,
     label:'Mopas secas codificadas por color',
     fn:e=> e.colorCod==='si'?100 : e.colorCod==='no'?0 : null },
@@ -1583,7 +1601,9 @@ function sopCompute(list){
     });
     const pcts = active.map(c=>crit[c.id].pct).filter(v=>v!=null);
     const total = pcts.length ? pcts.reduce((a,b)=>a+b,0)/pcts.length : null;
-    return {hotel:h, camaristas:cams.length, rooms:H.rooms, crit, total};
+    const stv = pcts.map(v=> Math.round(v)>=90?100 : Math.round(v)>=71?50 : 0);
+    const totalPlat = stv.length ? stv.reduce((a,b)=>a+b,0)/stv.length : null;
+    return {hotel:h, camaristas:cams.length, rooms:H.rooms, crit, total, totalPlat, cams};
   }).sort((a,b)=> HOTELS.indexOf(a.hotel)-HOTELS.indexOf(b.hotel));
 }
 function sopCell(p,n){
@@ -1617,7 +1637,8 @@ function renderSopCompliance(){
           <div class="sop-bar"><span style="width:${pctMuestra}%;${d.camaristas<SOP_TARGET_MIN?'background:#b7791f;':'background:#1e7e4f;'}"></span></div>
           <div style="font-size:11.5px;color:var(--ink-soft);">${faltan}</div></td>
         <td>${d.rooms}</td>
-        <td><span class="sop-num">${d.total==null?'—':Math.round(d.total)+'%'}</span></td>
+        <td><span class="sop-num">${d.total==null?'—':Math.round(d.total)+'%'}</span>
+          <div style="font-size:11.5px;color:var(--ink-soft);">En la plataforma: ${d.totalPlat==null?'—':Math.round(d.totalPlat)+'%'}</div></td>
         <td><span class="sop-badge ${st.cls}">${st.text}</span></td>
       </tr>`;}).join('')}</tbody></table>`;
   const active = SOP_CRITERIA.filter(sopIsOn);
@@ -1629,6 +1650,78 @@ function renderSopCompliance(){
       const st=sopStatus(d.total==null?null:Math.round(d.total));
       return `<td class="pct"><span class="sop-badge ${st.cls}">${d.total==null?'—':Math.round(d.total)+'%'}</span></td>`;}).join('')}</tr></tfoot>
   </table>`;
+}
+
+/* ===== Evaluaciones para la plataforma ===== */
+const SOP_PLATFORM_TEMPLATE = [{"block": "Pilar 1 – Ejecución Operativa de la Implementación", "items": ["La camarista prepara o recibe correctamente la solución de limpieza según la fórmula establecida (10 gatillazos de Daily Desinfectante/Multiuso en 2 litros de agua), sin usar medidas alternativas no verificables. (SOP §5.2)", "Se emplea una mopa húmeda por habitación, sin reutilización entre habitaciones. (SOP §5.10)", "Se realiza el barrido previo de la habitación antes del mopeado con ClickSpeed. (SOP §4)", "La técnica de mopeado se ejecuta en forma de 8, iniciando del fondo de la habitación hacia la puerta. (SOP §5.4)", "La colocación y el retiro de la mopa en el soporte se realiza según el procedimiento, usando los clips con los pies. (SOP §5.3, §5.5)", "Las mopas usadas se depositan en la funda destinada para mopas sucias; no se reutilizan sin lavado. (SOP §5.5, §6)", "El Soaper (referido en el SOP como \"trapeador\") se usa únicamente para limpieza profunda periódica o casos excepcionales autorizados, y no como reemplazo del mopeado diario con ClickSpeed. (SOP §5.8, §5.9)", "Toda utilización del Soaper (\"trapeador\") cuenta con autorización previa y registro de la supervisora del piso o área. (SOP §5.9, §6)", "Se respetan las excepciones de piso (coralina, piedra caliza porosa u otra superficie de alta porosidad) identificadas por el Ama de Llaves Ejecutiva del hotel. (SOP §5.7, §5.13)", "Se respeta la secuencia de limpieza: barrido, mopa húmeda y, si se requiere, mopa seca. (SOP §5.10)", "Otro criterio"]}, {"block": "Pilar 2 – Funcionalidad del Sistema", "items": ["El sistema ClickSpeed está completo (chasis, mopa Ultra Speed, bandeja perforada, contenedor, tapa, palo de aluminio) y en buen estado de funcionamiento. (SOP §5.1)", "Las mopas de microfibra no presentan desgaste, deshilachado o pérdida de capacidad de absorción que afecte su desempeño. (SOP §3.2)", "El Soaper (\"trapeador\") está disponible y operativo para los casos en que se autorice su uso. (SOP §5.1, §5.8)", "La solución preparada mantiene una concentración consistente con la fórmula del SOP, ya sea que la prepare la camarista o se entregue centralizada. (SOP §5.2)", "Otro criterio"]}, {"block": "Pilar 3 – Infraestructura y Equipamiento", "items": ["La dotación de mopas por camarista de habitaciones cumple el estándar corporativo: 19 húmedas + 4 secas = 23 mopas. (SOP §5.6)", "La dotación de mopas por camarista nocturna cumple el estándar: 10 húmedas + 10 secas = 20 mopas. (SOP §5.6)", "Existe disponibilidad diaria de mopas limpias, con lavado realizado en la lavandería del hotel todos los días. (SOP §6)", "El contenedor de mopas con tapa está disponible y en uso activo por cada camarista. (SOP §5.1)", "El producto Daily Desinfectante/Multiuso está disponible en cantidad suficiente para la operación diaria. (SOP §5.2)", "Otro criterio"]}, {"block": "Pilar 4 – Adopción Operativa", "items": ["La camarista conoce y aplica correctamente el criterio de preparación de la solución de limpieza (proporción y producto correcto). (SOP §5.2)", "La camarista identifica correctamente las excepciones de piso de su propiedad (coralina, alta porosidad) y sabe dónde aplican. (SOP §5.7)", "La camarista conoce el criterio de autorización para el uso del Soaper (\"trapeador\") y no lo utiliza sin autorización previa. (SOP §5.9)", "Existe consistencia en el criterio aplicado entre las distintas camaristas de la misma propiedad: dotación, técnica de mopeado, uso de mopas secas. (SOP §5.4, §5.6)", "Otro criterio"]}];
+const SOP_HOTEL_NAMES = {DRFPC:'Dreams Flora',DRRPC:'Dreams Royal Beach',SERPC:'Secrets Royal Beach',DROPC:'Dreams Onyx',BREPC:'Breathless Punta Cana',SEAUA:'Secrets Baby Beach',SDQCT:'Hyatt Centric Santo Domingo',PUJJD:'JdV Royal Beach',DRJRC:'Dreams Jade'};
+function sopState(pct){ const r=Math.round(pct); return r>=90?'cumple' : r>=71?'parcial' : 'nocumple'; }
+function sopCamState(v){ return v>=90?'cumple' : v>=50?'parcial' : 'nocumple'; }
+function sopBuildPlatformRecords(list){
+  const active = SOP_CRITERIA.filter(sopIsOn);
+  const data = sopCompute(list);
+  return data.filter(d=>d.total!=null).map(d=>{
+    const mine = list.filter(e=>e.hotel===d.hotel);
+    const dates = mine.map(e=>e.fecha).filter(Boolean).sort();
+    const freq = {}; mine.forEach(e=>{ if(e.levantadoPor) freq[e.levantadoPor]=(freq[e.levantadoPor]||0)+1; });
+    const evaluator = Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0] || 'Erika Quispe';
+    const byPos = {}; active.forEach(c=>{ byPos[c.tpl[0]+'_'+c.tpl[1]] = c; });
+    const checklist = [], opportunities = [], actions = [];
+    let total=0, count=0, nPar=0, nNo=0;
+    const recs = [];
+    SOP_PLATFORM_TEMPLATE.forEach((blk,bi)=>{
+      blk.items.forEach((item,ii)=>{
+        const c = byPos[bi+'_'+ii];
+        const cd = c ? d.crit[c.id] : null;
+        let result = 'na', obs = '';
+        if(c && cd && cd.pct!=null){
+          result = sopState(cd.pct);
+          const cams = d.cams.map(C=>C.sc[c.id]?C.sc[c.id].reduce((a,b)=>a+b,0)/C.sc[c.id].length:null).filter(v=>v!=null);
+          const nc = cams.filter(v=>sopCamState(v)==='cumple').length, np = cams.filter(v=>sopCamState(v)==='parcial').length, nn = cams.filter(v=>sopCamState(v)==='nocumple').length;
+          obs = `Entrevistas: ${cams.length} camaristas con dato; ${nc} cumplen, ${np} parcial, ${nn} no cumplen (promedio ${Math.round(cd.pct)}%).`;
+          if(result==='cumple'){ total+=100; } else if(result==='parcial'){ total+=50; nPar++; } else { nNo++; }
+          count++;
+        }
+        checklist.push({block:blk.block, item, result, obs, evidenceName:'', editable:false});
+        if(result==='parcial' || result==='nocumple'){
+          const key = bi+'_'+ii, isNo = result==='nocumple';
+          const id = 'AUTO-'+key+'-'+Date.now()+'-'+Math.random().toString(36).slice(2,6);
+          const text = (isNo?'Atender incumplimiento: ':'Fortalecer cumplimiento parcial: ')+item;
+          opportunities.push({id, text, type:'Operativa', priority:isNo?'Alta':'Media', owner:'', criterion:item, pillar:blk.block, obs, auto:true, autoCriterionKey:key});
+          actions.push({oppId:id, pillar:blk.block, criterion:item, finding:text,
+            text:isNo?'Definir e implementar acción correctiva para lograr el cumplimiento del criterio.':'Completar los ajustes requeridos para alcanzar el cumplimiento total del criterio.',
+            owner:'', date:'', status:'Pendiente', evidenceName:'', auto:true, autoCriterionKey:key, assignees:[{date:'',plan:'',owner:'',updates:[]}]});
+          recs.push((isNo?'• Priorizar acción correctiva para: ':'• Completar ajustes para: ')+item);
+        }
+      });
+    });
+    const score = count ? Math.round(total/count) : 0;
+    const status = score>=90?'Implementación Consolidada' : score>=71?'Requiere Seguimiento' : 'Requiere Intervención Prioritaria';
+    return {
+      code:'', savedAt:new Date().toISOString(), project:'Vileda Ama de llaves', hotel:SOP_HOTEL_NAMES[d.hotel]||d.hotel,
+      property:{}, visitDate:dates[dates.length-1]||'', evaluator, hotelDirector:'', corporateDirector:'Glenys Silverio',
+      manager:'', area:'Ama de llaves', checkinArea:'', operationalUnits:[], shift:'', score, status,
+      checklist, opportunities, actions,
+      generalComments:`Evaluación generada a partir de ${d.camaristas} camaristas entrevistadas (${d.rooms} habitaciones) entre ${dates[0]||''} y ${dates[dates.length-1]||''}, aplicando el SOP PL-ALOJ-008. Los criterios que no se miden en las entrevistas quedan como N/A y pueden completarse en el check list de la plataforma.`,
+      conclusions:`La evaluación obtuvo ${score}% (${status}). Se registraron ${nNo} criterio(s) No cumple y ${nPar} criterio(s) Parcial.`,
+      recommendations:recs.join('\n'), corporateSupport:'No', supportNeeded:'', nextVisitDate:'', nextVisitObjective:'',
+      source:'entrevistas-vileda', interviewStats:{camaristas:d.camaristas, habitaciones:d.rooms, desde:dates[0]||'', hasta:dates[dates.length-1]||''}
+    };
+  });
+}
+function sopExportPlatform(){
+  const list = getFilteredEntries();
+  const recs = sopBuildPlatformRecords(list);
+  if(!recs.length){ alert('No hay registros con datos en el rango de fechas seleccionado.'); return; }
+  const data = sopCompute(list).filter(d=>d.total!=null);
+  const pocas = data.filter(d=>d.camaristas<SOP_TARGET_MIN).map(d=>`${d.hotel}: ${d.camaristas} camaristas`);
+  if(pocas.length && !confirm('Estos hoteles tienen menos de '+SOP_TARGET_MIN+' camaristas entrevistadas:\n\n'+pocas.join('\n')+'\n\n¿Generar el archivo de todos modos?')) return;
+  const blob = new Blob([JSON.stringify({gm_platform_assessments_v1:true, assessments:recs}, null, 1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'Evaluaciones_Vileda_para_plataforma_'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
 }
 function sopExcelRows(list){
   const active = SOP_CRITERIA.filter(sopIsOn);
