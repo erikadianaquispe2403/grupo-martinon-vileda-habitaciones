@@ -398,6 +398,21 @@
     border-top:1px solid var(--line);
     background:#fbfaf7;
   }
+
+  .sop-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;}
+  .sop-badge.g{background:#e3f4ea;color:#1e7e4f;}
+  .sop-badge.y{background:#fbf0d9;color:#9a6a12;}
+  .sop-badge.r{background:#fbe4e1;color:#b3261e;}
+  .sop-badge.n{background:#eceef1;color:#5B5F66;}
+  .sop-config{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:6px 18px;margin:12px 0 16px;font-size:13px;}
+  .sop-config label{font-weight:500;display:flex;gap:8px;align-items:flex-start;cursor:pointer;}
+  .sop-config .nosop{color:var(--ink-soft);font-size:11.5px;}
+  .sop-bar{height:8px;border-radius:6px;background:#eceef1;overflow:hidden;min-width:90px;margin-top:4px;}
+  .sop-bar>span{display:block;height:100%;background:var(--navy);}
+  .sop-num{font-size:20px;font-weight:700;color:var(--navy);}
+  .sop-matrix td.pct{text-align:center;font-weight:700;white-space:nowrap;}
+  .sop-matrix td.pct small{display:block;font-weight:400;color:var(--ink-soft);font-size:10.5px;}
+  .sop-matrix tfoot td{font-weight:700;background:#fbfaf7;border-top:2px solid var(--line);}
 </style>
 </head>
 <body>
@@ -730,6 +745,29 @@
       <div class="table-wrap" id="tableWrap"></div>
     </div>
     <div class="foot-note">Estándar SOP: el Soaper/Trapeador está restringido a limpieza profunda excepcional (máx. cada 20 días, con autorización de supervisión) — no a limpieza diaria de habitación regular. Un registro se marca en rojo si se usó sin autorización de supervisión, con frecuencia diaria o semanal, o en una habitación regular de limpieza diaria.</div>
+  </section>
+
+  <section class="panel" id="sopPanel">
+    <div class="panel-head" onclick="togglePanel('sopPanel')">
+      <h2>Cumplimiento del SOP por hotel (resultado de las entrevistas)</h2>
+      <span class="chev">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="info-box">
+        <strong>¿Cómo se calcula el % del hotel?</strong>
+        <ul>
+          <li>Cada registro se compara con el SOP PL-ALOJ-008: cumple = 100, parcial = 50, no cumple = 0. Lo que no se respondió no cuenta.</li>
+          <li>Primero se promedian las habitaciones de cada camarista, para que todas pesen igual, y después se promedian las camaristas del hotel.</li>
+          <li>El % del hotel es el promedio de los criterios activos. Estado: 90% o más Implementación Consolidada, 71 a 89% Requiere Seguimiento, 70% o menos Requiere Intervención Prioritaria.</li>
+          <li>Meta de muestra: entre 20 y 30 camaristas distintas por hotel. Escribe siempre el nombre de la camarista de la misma forma.</li>
+        </ul>
+      </div>
+      <div class="subhead">Criterios que puntúan</div>
+      <div id="sopConfig" class="sop-config"></div>
+      <div id="sopHotels" class="table-wrap"></div>
+      <div class="subhead" style="margin-top:18px;">Detalle por criterio y hotel</div>
+      <div id="sopMatrix" class="table-wrap sop-matrix"></div>
+    </div>
   </section>
 
   <section class="panel" id="chartsPanel">
@@ -1451,6 +1489,155 @@ function renderSummary(){
     <div class="card"><div class="num">${avgSecas} / ${avgMojadas}</div><div class="lbl">Promedio mopas secas / húmedas</div></div>
     <div class="card"><div class="num">${vasosPct}%</div><div class="lbl">Kit de vasos completo (fibra + paño)</div></div>
   `;
+  try{ renderSopCompliance(); }catch(err){ console.error(err); }
+}
+
+
+/* ===== Cumplimiento del SOP por hotel ===== */
+const SOP_TARGET_MIN = 20, SOP_TARGET_MAX = 30;
+const SOP_STORE_KEY = 'vileda_sop_enabled_v1';
+const SOP_CRITERIA = [
+  { id:'dotacion', pilar:'Pilar 3 – Infraestructura y Equipamiento', on:true,
+    label:'Dotación de mopas conforme al perfil de la camarista (SOP 5.6)',
+    fn:e=>{
+      const h=Number(e.mojadas||0), s=Number(e.secas||0);
+      if(!e.turno || (h===0 && s===0)) return null;
+      if(e.turno==='diurna'){ if(h>=19 && s>=4) return 100; if(h+s>=23) return 50; return 0; }
+      if(e.turno==='nocturna'){ if(h>=10 && s>=10) return 100; if(h+s>=20) return 50; return 0; }
+      return null;
+    }},
+  { id:'humectacion', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+    label:'Preparación de la mopa: 10 gatillazos de multiusos en 2 L de agua (SOP 5.2)',
+    fn:e=>{
+      const v=e.humectacion||'';
+      if(!v || v==='Otro') return null;
+      if(v.indexOf('10 gatillazos')>=0) return 100;
+      if(v==='Solución multiusos') return 50;
+      return 0;
+    }},
+  { id:'barrido', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+    label:'Barrido previo con escoba antes de mopear (SOP 5.10)',
+    fn:e=> e.escobaBarrido==='si'?100 : e.escobaBarrido==='no'?0 : null },
+  { id:'secuencia', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+    label:'Secuencia barrido, mopa húmeda y mopa seca (SOP 5.10)',
+    fn:e=>{
+      const v=e.secuencia||'';
+      if(!v) return null;
+      if(v.indexOf('completo y en el orden correcto')>=0) return 100;
+      if(v.indexOf('fuera de orden')>=0 || v.indexOf('Parcial')===0) return 50;
+      if(v.indexOf('No se respet')===0) return 0;
+      return null;
+    }},
+  { id:'trapeador', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:true,
+    label:'Trapeador / Soaper restringido y autorizado por supervisión (SOP 5.8 y 5.9)',
+    fn:e=> e.soaper==='no'?100 : e.soaper==='si'?(isRiesgo(e)?0:100) : null },
+  { id:'color', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:false, nosop:true,
+    label:'Mopas secas codificadas por color',
+    fn:e=> e.colorCod==='si'?100 : e.colorCod==='no'?0 : null },
+  { id:'kitvasos', pilar:'Pilar 3 – Infraestructura y Equipamiento', on:false, nosop:true,
+    label:'Kit de vasos completo: fibra blanca y paño blanco',
+    fn:e=>{
+      if(!e.fibra && !e.pano) return null;
+      const n=(e.fibra==='si'?1:0)+(e.pano==='si'?1:0);
+      return n===2?100 : n===1?50 : 0;
+    }}
+];
+let sopEnabled = {};
+try{ sopEnabled = JSON.parse(localStorage.getItem(SOP_STORE_KEY)||'{}')||{}; }catch(err){ sopEnabled = {}; }
+function sopIsOn(c){ return (c.id in sopEnabled) ? !!sopEnabled[c.id] : c.on; }
+function sopToggle(id, on){
+  sopEnabled[id] = !!on;
+  try{ localStorage.setItem(SOP_STORE_KEY, JSON.stringify(sopEnabled)); }catch(err){}
+  renderSopCompliance();
+}
+function sopStatus(p){
+  if(p==null) return {cls:'n', text:'Sin datos'};
+  if(p>=90) return {cls:'g', text:'Implementación Consolidada'};
+  if(p>=71) return {cls:'y', text:'Requiere Seguimiento'};
+  return {cls:'r', text:'Requiere Intervención Prioritaria'};
+}
+function sopCompute(list){
+  const active = SOP_CRITERIA.filter(sopIsOn);
+  const byHotel = {};
+  list.forEach(e=>{
+    if(!e.hotel) return;
+    const H = byHotel[e.hotel] || (byHotel[e.hotel] = {rooms:0, cam:{}});
+    H.rooms++;
+    const key = (e.camarista||'').trim().toLowerCase().replace(/\s+/g,' ');
+    if(!key) return;
+    const C = H.cam[key] || (H.cam[key] = {name:e.camarista, rooms:0, sc:{}});
+    C.rooms++;
+    active.forEach(c=>{
+      const v = c.fn(e);
+      if(v==null) return;
+      (C.sc[c.id] = C.sc[c.id] || []).push(v);
+    });
+  });
+  return Object.keys(byHotel).map(h=>{
+    const H = byHotel[h];
+    const cams = Object.values(H.cam);
+    const crit = {};
+    active.forEach(c=>{
+      const vals = cams.map(C=> C.sc[c.id] ? C.sc[c.id].reduce((a,b)=>a+b,0)/C.sc[c.id].length : null).filter(v=>v!=null);
+      crit[c.id] = vals.length ? {pct: vals.reduce((a,b)=>a+b,0)/vals.length, n: vals.length} : {pct:null, n:0};
+    });
+    const pcts = active.map(c=>crit[c.id].pct).filter(v=>v!=null);
+    const total = pcts.length ? pcts.reduce((a,b)=>a+b,0)/pcts.length : null;
+    return {hotel:h, camaristas:cams.length, rooms:H.rooms, crit, total};
+  }).sort((a,b)=> HOTELS.indexOf(a.hotel)-HOTELS.indexOf(b.hotel));
+}
+function sopCell(p,n){
+  if(p==null) return '<td class="pct"><span class="sop-badge n">—</span></td>';
+  const st = sopStatus(Math.round(p));
+  return `<td class="pct"><span class="sop-badge ${st.cls}">${Math.round(p)}%</span><small>${n} camaristas</small></td>`;
+}
+function renderSopCompliance(){
+  const cfg = document.getElementById('sopConfig');
+  if(!cfg) return;
+  cfg.innerHTML = SOP_CRITERIA.map(c=>`
+    <label><input type="checkbox" ${sopIsOn(c)?'checked':''} onchange="sopToggle('${c.id}', this.checked)">
+      <span>${c.label}${c.nosop?' <span class="nosop">(no está definido en el SOP; solo informativo si lo dejas apagado)</span>':''}</span></label>`).join('');
+  const data = sopCompute(getFilteredEntries());
+  const hotelsBox = document.getElementById('sopHotels');
+  const matrixBox = document.getElementById('sopMatrix');
+  if(!data.length){
+    hotelsBox.innerHTML = '<div class="info-box">Todavía no hay registros en el rango de fechas seleccionado.</div>';
+    matrixBox.innerHTML = '';
+    return;
+  }
+  hotelsBox.innerHTML = `<table>
+    <thead><tr><th>Hotel</th><th>Camaristas entrevistadas</th><th>Habitaciones</th><th>% de cumplimiento</th><th>Estado</th></tr></thead>
+    <tbody>${data.map(d=>{
+      const st = sopStatus(d.total==null?null:Math.round(d.total));
+      const pctMuestra = Math.min(100, Math.round(100*d.camaristas/SOP_TARGET_MIN));
+      const faltan = d.camaristas < SOP_TARGET_MIN ? `Faltan ${SOP_TARGET_MIN-d.camaristas} para la meta mínima` : (d.camaristas>SOP_TARGET_MAX?'Por encima de la meta':'Muestra completa');
+      return `<tr>
+        <td><strong>${d.hotel}</strong></td>
+        <td>${d.camaristas} <span style="color:var(--ink-soft);font-size:12px;">de ${SOP_TARGET_MIN} a ${SOP_TARGET_MAX}</span>
+          <div class="sop-bar"><span style="width:${pctMuestra}%;${d.camaristas<SOP_TARGET_MIN?'background:#b7791f;':'background:#1e7e4f;'}"></span></div>
+          <div style="font-size:11.5px;color:var(--ink-soft);">${faltan}</div></td>
+        <td>${d.rooms}</td>
+        <td><span class="sop-num">${d.total==null?'—':Math.round(d.total)+'%'}</span></td>
+        <td><span class="sop-badge ${st.cls}">${st.text}</span></td>
+      </tr>`;}).join('')}</tbody></table>`;
+  const active = SOP_CRITERIA.filter(sopIsOn);
+  if(!active.length){ matrixBox.innerHTML = '<div class="info-box">Activa al menos un criterio.</div>'; return; }
+  matrixBox.innerHTML = `<table>
+    <thead><tr><th>Criterio</th>${data.map(d=>`<th style="text-align:center;">${d.hotel}</th>`).join('')}</tr></thead>
+    <tbody>${active.map(c=>`<tr><td>${c.label}</td>${data.map(d=>sopCell(d.crit[c.id].pct, d.crit[c.id].n)).join('')}</tr>`).join('')}</tbody>
+    <tfoot><tr><td>% de cumplimiento del hotel</td>${data.map(d=>{
+      const st=sopStatus(d.total==null?null:Math.round(d.total));
+      return `<td class="pct"><span class="sop-badge ${st.cls}">${d.total==null?'—':Math.round(d.total)+'%'}</span></td>`;}).join('')}</tr></tfoot>
+  </table>`;
+}
+function sopExcelRows(list){
+  const active = SOP_CRITERIA.filter(sopIsOn);
+  return sopCompute(list).map(d=>{
+    const row = {'Hotel': d.hotel, 'Camaristas entrevistadas': d.camaristas, 'Habitaciones registradas': d.rooms,
+      '% de cumplimiento del hotel': d.total==null?'':Math.round(d.total), 'Estado': sopStatus(d.total==null?null:Math.round(d.total)).text};
+    active.forEach(c=>{ row[c.label] = d.crit[c.id].pct==null?'':Math.round(d.crit[c.id].pct); });
+    return row;
+  });
 }
 
 function shortHotelLabel(h){
@@ -1603,6 +1790,10 @@ function exportExcel(){
   ws['!cols'] = [{wch:11},{wch:20},{wch:16},{wch:12},{wch:20},{wch:9},{wch:11},{wch:11},{wch:14},{wch:28},{wch:14},{wch:12},{wch:30},{wch:16},{wch:16},{wch:16},{wch:13},{wch:11},{wch:11},{wch:24},{wch:20},{wch:20},{wch:22},{wch:18},{wch:20},{wch:20},{wch:12},{wch:40},{wch:30}];
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Levantamiento Vileda');
+  try{
+    const sopRows = sopExcelRows(filtered);
+    if(sopRows.length){ XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sopRows), 'Cumplimiento SOP por hotel'); }
+  }catch(err){ console.error(err); }
   const stamp = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `Levantamiento_Vileda_${stamp}.xlsx`);
 }
