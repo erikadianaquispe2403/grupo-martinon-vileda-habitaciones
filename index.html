@@ -1706,7 +1706,7 @@ function renderSummary(){
   const vasosPct = total ? Math.round(100*filtered.filter(e=>e.fibra==='si' && e.pano==='si').length/total) : 0;
 
   document.getElementById('summaryCards').innerHTML = `
-    <div class="card"><div class="num">${total}</div><div class="lbl">Habitaciones registradas</div></div>
+    <div class="card"><div class="num">${total + getFilteredAll().filter(isSup).length}</div><div class="lbl">Habitaciones registradas</div></div>
     <div class="card ${riesgoCount?'risk':''}"><div class="num">${riesgoCount}</div><div class="lbl">Uso de Soaper fuera de estándar</div></div>
     <div class="card"><div class="num">${avgSecas} / ${avgMojadas}</div><div class="lbl">Promedio mopas secas / húmedas</div></div>
     <div class="card"><div class="num">${vasosPct}%</div><div class="lbl">Kit de vasos completo (fibra + paño)</div></div>
@@ -1809,6 +1809,7 @@ function sopCompute(list){
       (C.sc[c.id] = C.sc[c.id] || []).push(v);
     });
   });
+  getFilteredAll().filter(isSup).forEach(e=>{ if(byHotel[e.hotel]) byHotel[e.hotel].rooms++; });
   return Object.keys(byHotel).map(h=>{
     const H = byHotel[h];
     const cams = Object.values(H.cam);
@@ -2024,7 +2025,7 @@ function renderCharts(){
   const byHotel = h => filtered.filter(e=>e.hotel===h);
 
   buildHBarChart('chartHabitaciones',
-    HOTELS.map(h => ({ label: shortHotelLabel(h), segments: [{ value: byHotel(h).length, color: gold }] }))
+    HOTELS.map(h => ({ label: shortHotelLabel(h), segments: [{ value: byHotel(h).length + getFilteredAll().filter(e=>isSup(e) && e.hotel===h).length, color: gold }] }))
   );
 
   renderLegend('chartCategoriaLegend', [{color:navy,label:'Regular'},{color:gold,label:'Preferred'},{color:steel,label:'X-hale'}]);
@@ -2173,7 +2174,7 @@ function exportPDF(){
     <h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
     <div class="pr-meta">
       Alcance: ${scope} &nbsp;·&nbsp; Rango: ${rangeLabel} &nbsp;·&nbsp; Generado: ${new Date().toLocaleDateString('es-DO')} &nbsp;·&nbsp;
-      ${total} habitaciones registradas &nbsp;·&nbsp; ${riesgoCount} fuera de estándar SOP
+      ${total + supL.length} habitaciones registradas (${supL.length} de supervisora) &nbsp;·&nbsp; ${riesgoCount} fuera de estándar SOP
     </div>
     <table>
       <thead><tr>
@@ -2255,7 +2256,7 @@ function exportWord(){
 <div class="eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
 <h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
 <p>Alcance: ${esc(scope)} · Rango: ${rangeLabel} · Generado: ${new Date().toLocaleDateString('es-DO')}<br>
-${camL.length} habitación(es) registradas · ${riesgoCount} fuera de estándar SOP · ${supL.length} cuestionario(s) de supervisora</p>
+${camL.length + supL.length} habitación(es) registradas (${supL.length} de supervisora) · ${riesgoCount} fuera de estándar SOP · ${supL.length} cuestionario(s) de supervisora</p>
 ${camL.length?`<h2>Resumen de habitaciones</h2>
 <table><thead><tr><th>Fecha</th><th>Hotel</th><th>Turno</th><th>Camarista</th><th>Hab.</th><th>Mopas</th><th>Modo mopa seca</th><th>Soaper</th></tr></thead><tbody>${resumen}</tbody></table>
 <h2>Detalle por habitación</h2>${detCam}`:''}
