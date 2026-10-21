@@ -399,6 +399,13 @@
     background:#fbfaf7;
   }
 
+  .detail-txt{margin-top:8px;}
+  .supq{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:#fbfaf7;}
+  .supq .q{font-weight:600;font-size:13.5px;margin-bottom:8px;}
+  .supq .q small{display:block;font-weight:400;color:var(--ink-soft);font-size:11.5px;margin-top:2px;}
+  .supq .yn{flex-wrap:wrap;}
+  .supq textarea{margin-top:8px;}
+  .badge.sup{background:#EAEEF5;color:var(--navy);}
   .sop-badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700;}
   .sop-badge.g{background:#e3f4ea;color:#1e7e4f;}
   .sop-badge.y{background:#fbf0d9;color:#9a6a12;}
@@ -455,6 +462,14 @@
       <span class="chev">▾</span>
     </div>
     <div class="panel-body">
+      <div class="field">
+        <label>Perfil entrevistado</label>
+        <div class="yn" id="f_perfil_yn">
+          <button type="button" data-val="camarista" onclick="setYN('f_perfil',this)">Camarista</button>
+          <button type="button" data-val="supervisora" onclick="setYN('f_perfil',this)">Supervisora</button>
+        </div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-top:6px;" id="perfilHint">Camarista: levantamiento en habitación. Supervisora: cuestionario de supervisión (no requiere habitación).</div>
+      </div>
       <div class="grid2">
         <div class="field">
           <label>Hotel</label>
@@ -476,12 +491,12 @@
           <input type="date" id="f_fecha">
         </div>
         <div class="field">
-          <label>Nombre de la camarista</label>
+          <label id="lblNombre">Nombre de la camarista</label>
           <input type="text" id="f_camarista" placeholder="Nombre y apellido">
         </div>
         <div class="field">
-          <label>Número de habitación</label>
-          <input type="text" id="f_habitacion" placeholder="Ej. 214">
+          <label id="lblHab">Número de habitación</label>
+          <input type="text" id="f_habitacion" placeholder="Ej. 214" data-ph-cam="Ej. 214" data-ph-sup="Ej. Pisos 1-3 / Ala norte">
         </div>
       </div>
 
@@ -494,6 +509,7 @@
         <div id="dotacionHint" style="font-size:12px;color:var(--ink-soft);margin-top:6px;">Selecciona el turno para ver la dotación estándar del SOP.</div>
       </div>
 
+      <div id="camBlock">
       <div class="subhead">Dotación de mopas</div>
       <div class="grid2">
         <div class="field">
@@ -533,6 +549,7 @@
           <button type="button" data-val="si" onclick="setYN('f_color',this)">Sí</button>
           <button type="button" data-val="no" onclick="setYN('f_color',this)">No</button>
         </div>
+        <textarea id="f_color_detalle" class="detail-txt" placeholder="Detalle adicional sobre la codificación por color (opcional)…"></textarea>
       </div>
 
       <div class="field">
@@ -552,6 +569,7 @@
           <button type="button" data-val="si" onclick="setYN('f_escoba',this)">Sí</button>
           <button type="button" data-val="no" onclick="setYN('f_escoba',this)">No</button>
         </div>
+        <textarea id="f_escoba_detalle" class="detail-txt" placeholder="Detalle adicional sobre el barrido / uso de la escoba (opcional)…"></textarea>
       </div>
 
       <div class="field">
@@ -563,6 +581,7 @@
           <div class="check-row"><input type="checkbox" value="Inspección programada o auditoría" class="c_casosuso"> Inspección programada o auditoría</div>
           <div class="check-row"><input type="checkbox" value="Otro" class="c_casosuso"> Otro</div>
         </fieldset>
+        <textarea id="f_casosuso_detalle" class="detail-txt" placeholder="Detalle adicional sobre los casos de uso de la mopa seca (opcional)…"></textarea>
       </div>
 
       <div class="field">
@@ -574,6 +593,7 @@
           <div class="check-row"><input type="checkbox" value="Inspección programada o auditoría" class="c_casosusohumeda"> Inspección programada o auditoría</div>
           <div class="check-row"><input type="checkbox" value="Otro" class="c_casosusohumeda"> Otro</div>
         </fieldset>
+        <textarea id="f_casosusohumeda_detalle" class="detail-txt" placeholder="Detalle adicional sobre los casos de uso de la mopa húmeda (opcional)…"></textarea>
       </div>
 
       <div class="field">
@@ -587,6 +607,7 @@
           <option>No la limpia, la reutiliza sucia</option>
           <option>Otro</option>
         </select>
+        <textarea id="f_limpiamopa_detalle" class="detail-txt" placeholder="Detalle adicional sobre cómo limpia la mopa seca (opcional)…"></textarea>
       </div>
 
       <div class="field">
@@ -648,6 +669,9 @@
           </div>
         </div>
       </div>
+      <div class="field">
+        <textarea id="f_vasos_detalle" class="detail-txt" style="margin-top:0;" placeholder="Detalle adicional sobre el kit de vasos (fibra / paño) (opcional)…"></textarea>
+      </div>
 
       <div class="subhead">Preparación y conocimiento operativo</div>
       <div class="grid2">
@@ -662,6 +686,7 @@
             <option>Pasillero(a)</option>
             <option>Otro</option>
           </select>
+          <textarea id="f_quienprepara_detalle" class="detail-txt" placeholder="Detalle adicional sobre quién prepara las mopas (opcional)…"></textarea>
         </div>
         <div class="field">
           <label>Método de humectación/dosificación de las mopas</label>
@@ -693,6 +718,14 @@
           <option>No se respetó el flujo</option>
         </select>
         <textarea id="f_secuencia_detalle" placeholder="Detalle adicional sobre la secuencia observada (opcional)…" style="margin-top:8px;"></textarea>
+      </div>
+
+      </div>
+
+      <div id="supBlock" style="display:none;">
+        <div class="subhead">Cuestionario de supervisora</div>
+        <div style="font-size:12px;color:var(--ink-soft);margin-bottom:12px;">Basado en el SOP PL-ALOJ-008. Marca el nivel de cumplimiento observado/declarado y agrega el comentario o la evidencia.</div>
+        <div id="supQuestions"></div>
       </div>
 
       <div class="subhead">Trazabilidad de la visita</div>
@@ -739,6 +772,7 @@
     <div class="panel-body" style="padding-top:14px;">
       <div class="actions" style="margin-top:0;margin-bottom:14px;">
         <button class="secondary" onclick="exportExcel()">Exportar a Excel</button>
+        <button class="secondary" onclick="exportWord()">Exportar a Word (editable)</button>
         <button class="secondary" onclick="exportPDF()">Exportar a PDF</button>
         <button class="ghost" onclick="confirmClearAll()">Borrar todos los registros</button>
       </div>
@@ -835,13 +869,18 @@ function todayStr(){
 let dateFrom = todayStr();
 let dateTo = todayStr();
 
-function getFilteredEntries(){
+function getFilteredAll(){
   return entries.filter(e=>{
     if(!e.fecha) return false;
     if(dateFrom && e.fecha < dateFrom) return false;
     if(dateTo && e.fecha > dateTo) return false;
     return true;
   });
+}
+
+/* Solo registros de camaristas (los cuestionarios de supervisora no cuentan como habitaciones en métricas ni SOP) */
+function getFilteredEntries(){
+  return getFilteredAll().filter(e=>!isSup(e));
 }
 
 function setDatePreset(preset){
@@ -864,7 +903,7 @@ function setDatePreset(preset){
 
 function refreshFilterNote(){
   const note = document.getElementById('filterSummaryNote');
-  const total = getFilteredEntries().length;
+  const total = getFilteredAll().length;
   if(!dateFrom && !dateTo){
     note.textContent = `Mostrando todo el historial (${total} registros)`;
   }else{
@@ -917,13 +956,87 @@ function togglePanel(id){
   document.getElementById(id).classList.toggle('collapsed');
 }
 
+/* ===== Perfil entrevistado + cuestionario de supervisora ===== */
+const SUP_QS = [
+  {k:'q1', t:'Conoce y verifica la dosificación vigente por turno', s:'Diurna: 2 L de agua + 10 gatillazos · Nocturna: 1 L + 10 gatillazos (SOP §5.2)'},
+  {k:'q2', t:'Verifica la dotación de mopas de cada camarista', s:'Diurna: 19 húmedas + 4 secas (23) · Nocturna: 10 húmedas + 10 secas (20) (SOP §5.6)'},
+  {k:'q3', t:'Controla la secuencia de limpieza y el uso de una mopa por habitación', s:'Barrido → mopa húmeda → mopa seca (si se requiere); sin reutilizar mopas entre habitaciones (SOP §5.10)'},
+  {k:'q4', t:'Autoriza y registra el uso del trapeador / Soaper solo en limpieza profunda', s:'Días 16 y 30, con autorización de la supervisora y registro en bitácora (SOP §5.8, §5.9)'},
+  {k:'q5', t:'Conoce las excepciones de piso y las comunica a las camaristas', s:'Coralina, piedra caliza porosa u otra superficie de alta porosidad (SOP §5.7)'},
+  {k:'q6', t:'Supervisa el lavado diario de mopas, la funda de mopas sucias y el estado del sistema', s:'Mopas limpias disponibles a diario, contenedor con tapa y equipo completo (SOP §5.1, §5.5, §6)'}
+];
+const SUP_OPTS = [['cumple','Cumple'],['parcial','Parcial'],['nocumple','No cumple'],['na','No aplica']];
+const SUP_LBL = {cumple:'Cumple', parcial:'Parcial', nocumple:'No cumple', na:'No aplica'};
+
+function isSup(e){ return e && e.perfil === 'supervisora'; }
+function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function buildSupQuestions(){
+  const wrap = document.getElementById('supQuestions');
+  if(!wrap) return;
+  wrap.innerHTML = SUP_QS.map((q,i)=>`
+    <div class="supq">
+      <div class="q">${i+1}. ${q.t}<small>${q.s}</small></div>
+      <div class="yn" id="sq_${q.k}_yn">
+        ${SUP_OPTS.map(o=>`<button type="button" data-val="${o[0]}" onclick="setYN('sq_${q.k}',this)">${o[1]}</button>`).join('')}
+      </div>
+      <textarea id="sq_${q.k}_c" placeholder="Comentario / evidencia (opcional)…"></textarea>
+    </div>`).join('');
+}
+
+function applyPerfil(val){
+  const sup = val === 'supervisora';
+  const cam = document.getElementById('camBlock');
+  const sb = document.getElementById('supBlock');
+  if(cam) cam.style.display = sup ? 'none' : '';
+  if(sb) sb.style.display = sup ? 'block' : 'none';
+  document.getElementById('lblNombre').textContent = sup ? 'Nombre de la supervisora' : 'Nombre de la camarista';
+  document.getElementById('lblHab').textContent = sup ? 'Piso / área a cargo (opcional)' : 'Número de habitación';
+  const h = document.getElementById('f_habitacion');
+  h.placeholder = sup ? h.dataset.phSup : h.dataset.phCam;
+}
+
+function selectPerfil(val){
+  const wrap = document.getElementById('f_perfil_yn');
+  ynState['f_perfil'] = val;
+  [...wrap.children].forEach(b=>{
+    b.classList.remove('active-yes','active-no','active-neutral');
+    if(b.dataset.val === val) b.classList.add('active-neutral');
+  });
+  applyPerfil(val);
+}
+
+function supPct(e){
+  const s = e.sup || {}; let sum = 0, n = 0;
+  SUP_QS.forEach(q=>{
+    const v = s[q.k];
+    if(v === 'cumple'){ sum += 100; n++; }
+    else if(v === 'parcial'){ sum += 50; n++; }
+    else if(v === 'nocumple'){ n++; }
+  });
+  return n ? Math.round(sum/n) : null;
+}
+
+function supBadge(e){
+  const p = supPct(e);
+  if(p === null) return '<span class="badge na">Sin respuestas</span>';
+  const cls = p >= 90 ? 'ok' : p >= 71 ? 'info' : 'risk';
+  return `<span class="badge ${cls}">Cumplimiento ${p}%</span>`;
+}
+
+function supRowsHtml(e){
+  const s = e.sup || {};
+  return SUP_QS.map((q,i)=>`<div><dt>${i+1}. ${q.t}</dt><dd><b>${SUP_LBL[s[q.k]]||'—'}</b>${s[q.k+'c']?' — '+esc(s[q.k+'c']):''}</dd></div>`).join('');
+}
+
 function setYN(field, btn){
   ynState[field] = btn.dataset.val;
   const wrap = btn.parentElement;
   [...wrap.children].forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
-  if(btn.dataset.val === 'si'){ btn.classList.add('active-yes'); }
-  else if(btn.dataset.val === 'no'){ btn.classList.add('active-no'); }
+  if(btn.dataset.val === 'si' || btn.dataset.val === 'cumple'){ btn.classList.add('active-yes'); }
+  else if(btn.dataset.val === 'no' || btn.dataset.val === 'nocumple'){ btn.classList.add('active-no'); }
   else { btn.classList.add('active-neutral'); }
+  if(field === 'f_perfil'){ applyPerfil(btn.dataset.val); }
   if(field === 'f_soaper'){
     document.getElementById('soaperUsoWrap').style.display = (btn.dataset.val === 'si') ? 'block' : 'none';
   }
@@ -1016,7 +1129,7 @@ async function uploadFoto(id, file){
   }
 }
 
-function toDbRow(e){
+function toDbRowBase(e){
   return {
     id: e.id,
     hotel: e.hotel,
@@ -1057,7 +1170,7 @@ function toDbRow(e){
   };
 }
 
-function fromDbRow(r){
+function fromDbRowBase(r){
   return {
     id: r.id,
     hotel: r.hotel,
@@ -1094,6 +1207,37 @@ function fromDbRow(r){
     fotoUrls: (r.foto_urls && r.foto_urls.length) ? r.foto_urls : (r.foto_url ? [r.foto_url] : []),
     obs: r.obs || ''
   };
+}
+
+/* Campos nuevos (columnas adicionales, nullable): perfil, detalles de texto y cuestionario de supervisora */
+function toDbRow(e){
+  const o = toDbRowBase(e);
+  o.perfil = e.perfil || 'camarista';
+  o.color_detalle = e.colorDetalle || '';
+  o.escoba_detalle = e.escobaDetalle || '';
+  o.casos_uso_detalle = e.casosUsoDetalle || '';
+  o.casos_uso_humeda_detalle = e.casosUsoHumedaDetalle || '';
+  o.limpia_mopa_detalle = e.limpiaMopaDetalle || '';
+  o.vasos_detalle = e.vasosDetalle || '';
+  o.quien_prepara_detalle = e.quienPreparaDetalle || '';
+  const sup = e.sup || {};
+  SUP_QS.forEach(q=>{ o['sup_'+q.k] = sup[q.k] || ''; o['sup_'+q.k+'_c'] = sup[q.k+'c'] || ''; });
+  return o;
+}
+
+function fromDbRow(r){
+  const e = fromDbRowBase(r);
+  e.perfil = r.perfil || 'camarista';
+  e.colorDetalle = r.color_detalle || '';
+  e.escobaDetalle = r.escoba_detalle || '';
+  e.casosUsoDetalle = r.casos_uso_detalle || '';
+  e.casosUsoHumedaDetalle = r.casos_uso_humeda_detalle || '';
+  e.limpiaMopaDetalle = r.limpia_mopa_detalle || '';
+  e.vasosDetalle = r.vasos_detalle || '';
+  e.quienPreparaDetalle = r.quien_prepara_detalle || '';
+  e.sup = {};
+  SUP_QS.forEach(q=>{ e.sup[q.k] = r['sup_'+q.k] || ''; e.sup[q.k+'c'] = r['sup_'+q.k+'_c'] || ''; });
+  return e;
 }
 
 async function loadEntries(){
@@ -1188,10 +1332,13 @@ async function saveEntry(){
   const hotel = document.getElementById('f_hotel').value;
   const habitacion = document.getElementById('f_habitacion').value.trim();
   const camarista = document.getElementById('f_camarista').value.trim();
-  if(!hotel || !habitacion || !camarista){
-    setStatus('Completa hotel, camarista y número de habitación antes de guardar.', true);
+  const perfil = ynState['f_perfil'] || 'camarista';
+  if(!hotel || !camarista || (perfil !== 'supervisora' && !habitacion)){
+    setStatus(perfil === 'supervisora' ? 'Completa hotel y nombre de la supervisora antes de guardar.' : 'Completa hotel, camarista y número de habitación antes de guardar.', true);
     return;
   }
+  const supAns = {};
+  SUP_QS.forEach(q=>{ supAns[q.k] = ynState['sq_'+q.k] || ''; supAns[q.k+'c'] = document.getElementById('sq_'+q.k+'_c').value.trim(); });
   const entry = {
     id: editingId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     hotel,
@@ -1225,7 +1372,16 @@ async function saveEntry(){
     secuenciaDetalle: document.getElementById('f_secuencia_detalle').value.trim(),
     levantadoPor: document.getElementById('f_levantadopor').value.trim(),
     hora: document.getElementById('f_hora').value,
-    obs: document.getElementById('f_obs').value.trim()
+    obs: document.getElementById('f_obs').value.trim(),
+    perfil,
+    sup: supAns,
+    colorDetalle: document.getElementById('f_color_detalle').value.trim(),
+    escobaDetalle: document.getElementById('f_escoba_detalle').value.trim(),
+    casosUsoDetalle: document.getElementById('f_casosuso_detalle').value.trim(),
+    casosUsoHumedaDetalle: document.getElementById('f_casosusohumeda_detalle').value.trim(),
+    limpiaMopaDetalle: document.getElementById('f_limpiamopa_detalle').value.trim(),
+    vasosDetalle: document.getElementById('f_vasos_detalle').value.trim(),
+    quienPreparaDetalle: document.getElementById('f_quienprepara_detalle').value.trim()
   };
 
   const filesToUpload = selectedFotoFiles.filter(Boolean);
@@ -1291,6 +1447,15 @@ function clearForm(){
   });
   document.querySelectorAll('.yn button').forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
   updateDotacionHint('');
+  document.getElementById('f_color_detalle').value = '';
+  document.getElementById('f_escoba_detalle').value = '';
+  document.getElementById('f_casosuso_detalle').value = '';
+  document.getElementById('f_casosusohumeda_detalle').value = '';
+  document.getElementById('f_limpiamopa_detalle').value = '';
+  document.getElementById('f_vasos_detalle').value = '';
+  document.getElementById('f_quienprepara_detalle').value = '';
+  SUP_QS.forEach(q=>{ delete ynState['sq_'+q.k]; document.getElementById('sq_'+q.k+'_c').value = ''; });
+  selectPerfil('camarista');
   editingId = null;
   document.getElementById('formTitle').textContent = 'Nuevo registro de habitación';
   document.getElementById('saveBtn').textContent = 'Guardar registro';
@@ -1335,7 +1500,7 @@ function editEntry(id){
     if(btn){
       ynState[field]=val;
       [...wrap.children].forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
-      btn.classList.add(val==='si'?'active-yes':val==='no'?'active-no':'active-neutral');
+      btn.classList.add((val==='si'||val==='cumple')?'active-yes':(val==='no'||val==='nocumple')?'active-no':'active-neutral');
     }
   };
   setBtn('f_turno', e.turno);
@@ -1347,6 +1512,21 @@ function editEntry(id){
   setBtn('f_supervision', e.supervision);
   setBtn('f_fibra', e.fibra);
   setBtn('f_pano', e.pano);
+  document.getElementById('f_color_detalle').value = e.colorDetalle || '';
+  document.getElementById('f_escoba_detalle').value = e.escobaDetalle || '';
+  document.getElementById('f_casosuso_detalle').value = e.casosUsoDetalle || '';
+  document.getElementById('f_casosusohumeda_detalle').value = e.casosUsoHumedaDetalle || '';
+  document.getElementById('f_limpiamopa_detalle').value = e.limpiaMopaDetalle || '';
+  document.getElementById('f_vasos_detalle').value = e.vasosDetalle || '';
+  document.getElementById('f_quienprepara_detalle').value = e.quienPreparaDetalle || '';
+  SUP_QS.forEach(q=>{
+    const s = e.sup || {};
+    document.getElementById('sq_'+q.k+'_c').value = s[q.k+'c'] || '';
+    [...document.getElementById('sq_'+q.k+'_yn').children].forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
+    delete ynState['sq_'+q.k];
+    setBtn('sq_'+q.k, s[q.k]);
+  });
+  selectPerfil(e.perfil || 'camarista');
   editingId = id;
   document.getElementById('formTitle').textContent = 'Editando registro — Hab. ' + e.habitacion;
   document.getElementById('saveBtn').textContent = 'Actualizar registro';
@@ -1388,7 +1568,7 @@ function toggleDetail(id){
 function renderTabs(){
   const wrap = document.getElementById('hotelTabs');
   const tabs = ['Todos', ...HOTELS];
-  const filtered = getFilteredEntries();
+  const filtered = getFilteredAll();
   wrap.innerHTML = tabs.map(t=>{
     const count = t==='Todos' ? filtered.length : filtered.filter(e=>e.hotel===t).length;
     return `<div class="tab ${t===activeTab?'active':''}" onclick="setTab('${t.replace(/'/g,"\\'")}')">${t} ${count?`(${count})`:''}</div>`;
@@ -1401,9 +1581,39 @@ function setTab(t){
   renderTable();
 }
 
+function supTableRows(e){
+  const expanded = expandedIds.has(e.id);
+  const turnoBadge = e.turno==='nocturna' ? `<span class="badge info">Nocturna</span>` : e.turno==='diurna' ? `<span class="badge na">Diurna</span>` : '—';
+  const main = `<tr>
+      <td>${e.fecha||''}</td>
+      <td>${e.hotel}</td>
+      <td>${turnoBadge}</td>
+      <td><span class="badge sup">Supervisora</span></td>
+      <td>${esc(e.camarista)}</td>
+      <td>${esc(e.habitacion)||'—'}</td>
+      <td colspan="4">Cuestionario de supervisora — ${supBadge(e)}</td>
+      <td class="row-actions">
+        <button class="toggle-detail" onclick="toggleDetail('${e.id}')">${expanded?'Ocultar':'Detalle'}</button>
+        <button onclick="editEntry('${e.id}')">Editar</button>
+        <button class="del" onclick="deleteEntry('${e.id}')">Eliminar</button>
+      </td>
+    </tr>`;
+  if(!expanded) return main;
+  const fotoHtml = (e.fotoUrls && e.fotoUrls.length)
+    ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${e.fotoUrls.map(u=>`<img src="${u}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--line);">`).join('')}</div>`
+    : '—';
+  return main + `<tr class="detail-row"><td colspan="11"><dl class="detail-grid">
+      ${supRowsHtml(e)}
+      <div><dt>Levantado por</dt><dd>${esc(e.levantadoPor)||'—'}</dd></div>
+      <div><dt>Hora de la visita</dt><dd>${e.hora||'—'}</dd></div>
+      <div><dt>Foto</dt><dd>${fotoHtml}</dd></div>
+      <div style="grid-column:1/-1;"><dt>Observaciones</dt><dd>${esc(e.obs)||'—'}</dd></div>
+    </dl></td></tr>`;
+}
+
 function renderTable(){
   const wrap = document.getElementById('tableWrap');
-  const list = getFilteredEntries()
+  const list = getFilteredAll()
     .filter(e => activeTab==='Todos' || e.hotel===activeTab)
     .sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||''));
 
@@ -1413,6 +1623,7 @@ function renderTable(){
   }
 
   const rows = list.map(e=>{
+    if(isSup(e)) return supTableRows(e);
     const riesgo = isRiesgo(e);
     const soaperBadge = e.soaper==='si'
       ? `<span class="badge ${riesgo?'risk':'ok'}">${riesgo?'Sí — riesgo':'Sí'}</span>`
@@ -1461,6 +1672,13 @@ function renderTable(){
         <div><dt>Producto químico para vasos</dt><dd>${e.productoVasos||'—'}</dd></div>
         <div><dt>Orden del flujo SOP respetado</dt><dd>${e.secuencia||'—'}</dd></div>
         <div><dt>Detalle adicional (secuencia)</dt><dd>${e.secuenciaDetalle||'—'}</dd></div>
+        <div><dt>Detalle adicional (codificación por color)</dt><dd>${esc(e.colorDetalle)||'—'}</dd></div>
+        <div><dt>Detalle adicional (escoba / barrido)</dt><dd>${esc(e.escobaDetalle)||'—'}</dd></div>
+        <div><dt>Detalle adicional (casos de uso mopa seca)</dt><dd>${esc(e.casosUsoDetalle)||'—'}</dd></div>
+        <div><dt>Detalle adicional (casos de uso mopa húmeda)</dt><dd>${esc(e.casosUsoHumedaDetalle)||'—'}</dd></div>
+        <div><dt>Detalle adicional (limpieza de la mopa seca)</dt><dd>${esc(e.limpiaMopaDetalle)||'—'}</dd></div>
+        <div><dt>Detalle adicional (quién prepara las mopas)</dt><dd>${esc(e.quienPreparaDetalle)||'—'}</dd></div>
+        <div><dt>Detalle adicional (kit de vasos)</dt><dd>${esc(e.vasosDetalle)||'—'}</dd></div>
         <div><dt>Levantado por</dt><dd>${e.levantadoPor||'—'}</dd></div>
         <div><dt>Hora de la visita</dt><dd>${e.hora||'—'}</dd></div>
         <div><dt>Foto</dt><dd>${fotoHtml}</dd></div>
@@ -1843,7 +2061,8 @@ function renderCharts(){
 
 function exportExcel(){
   const filtered = getFilteredEntries();
-  if(!filtered.length){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
+  const supList = getFilteredAll().filter(isSup);
+  if(!filtered.length && !supList.length){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
   const rows = filtered.map(e=>({
     'Fecha': e.fecha,
     'Hotel': e.hotel,
@@ -1874,6 +2093,13 @@ function exportExcel(){
     'Producto químico para vasos': e.productoVasos||'',
     'Orden del flujo SOP respetado': e.secuencia||'',
     'Detalle adicional (secuencia)': e.secuenciaDetalle||'',
+    'Detalle (codificación por color)': e.colorDetalle||'',
+    'Detalle (escoba / barrido)': e.escobaDetalle||'',
+    'Detalle (casos de uso mopa seca)': e.casosUsoDetalle||'',
+    'Detalle (casos de uso mopa húmeda)': e.casosUsoHumedaDetalle||'',
+    'Detalle (limpieza de la mopa seca)': e.limpiaMopaDetalle||'',
+    'Detalle (quién prepara las mopas)': e.quienPreparaDetalle||'',
+    'Detalle (kit de vasos)': e.vasosDetalle||'',
     'Levantado por': e.levantadoPor||'',
     'Hora de la visita': e.hora||'',
     'Fotos (URLs)': (e.fotoUrls||[]).join(' | '),
@@ -1887,16 +2113,36 @@ function exportExcel(){
     const sopRows = sopExcelRows(filtered);
     if(sopRows.length){ XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(sopRows), 'Cumplimiento SOP por hotel'); }
   }catch(err){ console.error(err); }
+  if(supList.length){
+    const supRows = supList.map(e=>{
+      const o = {
+        'Fecha': e.fecha, 'Hotel': e.hotel,
+        'Turno': e.turno==='nocturna'?'Nocturna':e.turno==='diurna'?'Diurna':'',
+        'Supervisora': e.camarista, 'Piso / área a cargo': e.habitacion||'',
+        'Cumplimiento %': supPct(e)==null?'':supPct(e)
+      };
+      SUP_QS.forEach((q,i)=>{ o[`P${i+1}. ${q.t}`] = SUP_LBL[(e.sup||{})[q.k]]||''; o[`P${i+1} comentario`] = (e.sup||{})[q.k+'c']||''; });
+      o['Levantado por'] = e.levantadoPor||''; o['Hora de la visita'] = e.hora||''; o['Fotos (URLs)'] = (e.fotoUrls||[]).join(' | '); o['Observaciones'] = e.obs||'';
+      return o;
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(supRows), 'Cuestionario supervisoras');
+  }
   const stamp = new Date().toISOString().slice(0,10);
   XLSX.writeFile(wb, `Levantamiento_Vileda_${stamp}.xlsx`);
 }
 
 function exportPDF(){
   const filtered = getFilteredEntries();
-  if(!filtered.length){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
+  if(!filtered.length && !getFilteredAll().some(isSup)){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
   const list = filtered
     .filter(e => activeTab==='Todos' || e.hotel===activeTab)
     .sort((a,b)=> (a.hotel||'').localeCompare(b.hotel) || (b.fecha||'').localeCompare(a.fecha||''));
+  const supL = getFilteredAll().filter(e=>isSup(e) && (activeTab==='Todos' || e.hotel===activeTab))
+    .sort((a,b)=> (a.hotel||'').localeCompare(b.hotel) || (b.fecha||'').localeCompare(a.fecha||''));
+  const supHtml = supL.length ? `<h2 style="margin-top:22px;font-size:15px;">Cuestionarios de supervisoras</h2>
+    <table><thead><tr><th>Fecha</th><th>Hotel</th><th>Supervisora</th><th>Cumpl.</th>${SUP_QS.map((q,i)=>`<th>P${i+1}</th>`).join('')}</tr></thead><tbody>
+    ${supL.map(e=>`<tr><td>${e.fecha||''}</td><td>${e.hotel}</td><td>${esc(e.camarista)}</td><td>${supPct(e)==null?'—':supPct(e)+'%'}</td>${SUP_QS.map(q=>`<td>${SUP_LBL[(e.sup||{})[q.k]]||'—'}</td>`).join('')}</tr>`).join('')}
+    </tbody></table>` : '';
 
   const rows = list.map(e=>{
     const riesgo = isRiesgo(e);
@@ -1936,8 +2182,91 @@ function exportPDF(){
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    ${supHtml}
   `;
   window.print();
+}
+
+buildSupQuestions();
+selectPerfil('camarista');
+
+function exportWord(){
+  const camL = getFilteredEntries().filter(e => activeTab==='Todos' || e.hotel===activeTab)
+    .sort((a,b)=> (a.hotel||'').localeCompare(b.hotel) || (b.fecha||'').localeCompare(a.fecha||''));
+  const supL = getFilteredAll().filter(e=>isSup(e) && (activeTab==='Todos' || e.hotel===activeTab))
+    .sort((a,b)=> (a.hotel||'').localeCompare(b.hotel) || (b.fecha||'').localeCompare(a.fecha||''));
+  if(!camL.length && !supL.length){ alert('No hay registros para exportar en el rango de fechas seleccionado.'); return; }
+  const yn = v => v==='si'?'Sí':v==='no'?'No':'—';
+  const cat = v => v==='preferred'?'Preferred':v==='xhale'?'X-hale':v==='regular'?'Regular':'—';
+  const turno = v => v==='nocturna'?'Nocturna':v==='diurna'?'Diurna':'—';
+  const row = (k,v) => `<tr><td class="k">${k}</td><td>${(v===undefined||v===null||v==='')?'—':v}</td></tr>`;
+  const fotos = e => (e.fotoUrls||[]).slice(0,3).map(u=>`<img src="${u}" width="180" style="margin:4px 6px 0 0;">`).join('');
+  const scope = activeTab === 'Todos' ? 'Todos los hoteles' : activeTab;
+  const rangeLabel = (dateFrom || dateTo) ? `${dateFrom||'…'} a ${dateTo||'…'}` : 'Todo el historial';
+  const riesgoCount = camL.filter(isRiesgo).length;
+
+  const resumen = camL.map(e=>`<tr>
+      <td>${e.fecha||''}</td><td>${e.hotel}</td><td>${turno(e.turno)}</td><td>${esc(e.camarista)}</td><td>${esc(e.habitacion)}</td>
+      <td>${esc(e.secas)}s / ${esc(e.mojadas)}m</td><td>${esc((e.modoSeca||[]).join(', '))||'—'}</td>
+      <td>${e.soaper==='si'?(isRiesgo(e)?'Sí — riesgo':'Sí'):'No'}</td></tr>`).join('');
+
+  const detCam = camL.map(e=>`
+    <h3>${e.hotel} · Hab. ${esc(e.habitacion)} · ${esc(e.camarista)} · ${e.fecha||''}</h3>
+    <table class="d">
+      ${row('Turno', turno(e.turno))}${row('Categoría / estado', cat(e.categoria)+' / '+esc(e.estado||'—'))}
+      ${row('Mopas secas / húmedas', esc(e.secas)+' / '+esc(e.mojadas))}
+      ${row('Mopas codificadas por color', yn(e.colorCod)+(e.colorDetalle?' — '+esc(e.colorDetalle):''))}
+      ${row('Momento / uso de la mopa seca', esc((e.modoSeca||[]).join(' | '))+(e.modoSecaDetalle?' — '+esc(e.modoSecaDetalle):''))}
+      ${row('Escoba en barrido inicial', yn(e.escobaBarrido)+(e.escobaDetalle?' — '+esc(e.escobaDetalle):''))}
+      ${row('Casos de uso mopa seca', esc((e.casosUso||[]).join(' | '))+(e.casosUsoDetalle?' — '+esc(e.casosUsoDetalle):''))}
+      ${row('Casos de uso mopa húmeda', esc((e.casosUsoHumeda||[]).join(' | '))+(e.casosUsoHumedaDetalle?' — '+esc(e.casosUsoHumedaDetalle):''))}
+      ${row('Cómo limpia la mopa seca', esc(e.limpiaMopa)+(e.limpiaMopaDetalle?' — '+esc(e.limpiaMopaDetalle):''))}
+      ${row('Uso de Soaper / Trapeador', yn(e.soaper)+(e.soaper==='si'?(isRiesgo(e)?' (fuera de estándar SOP)':''):''))}
+      ${e.soaper==='si'?row('Para qué se usó el Soaper', esc((e.soaperUso||[]).join(' | '))+(e.soaperUsoDetalle?' — '+esc(e.soaperUsoDetalle):'')):''}
+      ${e.soaper==='si'?row('Autorización de supervisión / frecuencia', yn(e.supervision)+' / '+esc(e.frecuencia||'—')):''}
+      ${row('Fibra blanca / paño blanco', yn(e.fibra)+' / '+yn(e.pano)+(e.vasosDetalle?' — '+esc(e.vasosDetalle):''))}
+      ${row('Quién prepara las mopas', esc(e.quienPrepara)+(e.quienPreparaDetalle?' — '+esc(e.quienPreparaDetalle):''))}
+      ${row('Humectación / dosificación', esc(e.humectacion)+(e.humectacionDetalle?' — '+esc(e.humectacionDetalle):''))}
+      ${row('Producto químico para vasos', esc(e.productoVasos))}
+      ${row('Orden del flujo SOP', esc(e.secuencia)+(e.secuenciaDetalle?' — '+esc(e.secuenciaDetalle):''))}
+      ${row('Levantado por / hora', esc(e.levantadoPor||'—')+' / '+(e.hora||'—'))}
+      ${row('Observaciones', esc(e.obs))}
+    </table>${fotos(e)}`).join('');
+
+  const detSup = supL.map(e=>`
+    <h3>${e.hotel} · Supervisora ${esc(e.camarista)} · ${e.fecha||''} ${supPct(e)==null?'':'· Cumplimiento '+supPct(e)+'%'}</h3>
+    <table class="d">
+      ${row('Turno', turno(e.turno))}${row('Piso / área a cargo', esc(e.habitacion))}
+      ${SUP_QS.map((q,i)=>row(`${i+1}. ${q.t}`, '<b>'+(SUP_LBL[(e.sup||{})[q.k]]||'—')+'</b>'+(((e.sup||{})[q.k+'c'])?' — '+esc(e.sup[q.k+'c']):''))).join('')}
+      ${row('Levantado por / hora', esc(e.levantadoPor||'—')+' / '+(e.hora||'—'))}
+      ${row('Observaciones', esc(e.obs))}
+    </table>${fotos(e)}`).join('');
+
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>Levantamiento Vileda – Habitaciones</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+<style>
+ body{font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#1a1a1a;}
+ h1{font-size:18pt;color:#1B2A4A;margin:0 0 4pt;} h2{font-size:13pt;color:#1B2A4A;margin-top:18pt;} h3{font-size:11pt;color:#1B2A4A;margin:14pt 0 4pt;}
+ .eyebrow{font-size:8.5pt;letter-spacing:1px;color:#8a6d1d;}
+ table{border-collapse:collapse;width:100%;} th,td{border:1px solid #c9ced6;padding:4pt 6pt;vertical-align:top;font-size:9.5pt;}
+ th{background:#1B2A4A;color:#fff;text-align:left;} td.k{width:34%;background:#f3f1ec;font-weight:bold;}
+</style></head><body>
+<div class="eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
+<h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
+<p>Alcance: ${esc(scope)} · Rango: ${rangeLabel} · Generado: ${new Date().toLocaleDateString('es-DO')}<br>
+${camL.length} habitación(es) registradas · ${riesgoCount} fuera de estándar SOP · ${supL.length} cuestionario(s) de supervisora</p>
+${camL.length?`<h2>Resumen de habitaciones</h2>
+<table><thead><tr><th>Fecha</th><th>Hotel</th><th>Turno</th><th>Camarista</th><th>Hab.</th><th>Mopas</th><th>Modo mopa seca</th><th>Soaper</th></tr></thead><tbody>${resumen}</tbody></table>
+<h2>Detalle por habitación</h2>${detCam}`:''}
+${supL.length?`<h2>Cuestionarios de supervisoras</h2>${detSup}`:''}
+</body></html>`;
+  const blob = new Blob(['﻿', html], {type:'application/msword;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `Levantamiento_Vileda_${new Date().toISOString().slice(0,10)}.doc`;
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
 loadEntries();
