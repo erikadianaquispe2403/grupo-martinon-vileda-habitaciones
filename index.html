@@ -430,7 +430,7 @@
     <div>
       <div class="eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
       <h1>Levantamiento en Habitaciones — Sistema Vileda</h1>
-      <p>Registro de campo por habitación: dotación de mopas, uso operativo del Soaper/Trapeador e implementos para limpieza de vasos.</p>
+      <p>Registro de campo por habitación: dotación de mopas, preparación/dosificación y uso operativo del Soaper/Trapeador.</p>
     </div>
   </div>
 </header>
@@ -573,6 +573,16 @@
       </div>
 
       <div class="field">
+        <label>¿La camarista considera que la mopa sustituye el uso de la escoba? <span style="font-weight:400;color:var(--ink-soft);">(SOP §5.10: la mopa no sustituye el barrido previo)</span></label>
+        <div class="yn" id="f_mopasust_yn">
+          <button type="button" data-val="si" onclick="setYN('f_mopasust',this)">Sí</button>
+          <button type="button" data-val="no" onclick="setYN('f_mopasust',this)">No</button>
+          <button type="button" data-val="otro" onclick="setYN('f_mopasust',this)">Otro</button>
+        </div>
+        <textarea id="f_mopasust_detalle" class="detail-txt" placeholder="Comentarios (explica la respuesta, o detalla si elegiste Otro)…"></textarea>
+      </div>
+
+      <div class="field">
         <fieldset>
           <legend>¿En qué caso se usó la mopa seca en esta habitación? (marcar todo lo observado)</legend>
           <div class="check-row"><input type="checkbox" value="Limpieza de rutina diaria (respeta la secuencia de uso establecida en el SOP)" class="c_casosuso"> Limpieza de rutina diaria (respeta la secuencia de uso establecida en el SOP)</div>
@@ -608,6 +618,16 @@
           <option>Otro</option>
         </select>
         <textarea id="f_limpiamopa_detalle" class="detail-txt" placeholder="Detalle adicional sobre cómo limpia la mopa seca (opcional)…"></textarea>
+      </div>
+
+      <div class="field">
+        <label>¿La camarista tiene las mopas sucias en la funda destinada para mopas sucias (funda plástica)? <span style="font-weight:400;color:var(--ink-soft);">(SOP §5.5)</span></label>
+        <div class="yn" id="f_funda_yn">
+          <button type="button" data-val="si" onclick="setYN('f_funda',this)">Sí</button>
+          <button type="button" data-val="no" onclick="setYN('f_funda',this)">No</button>
+          <button type="button" data-val="otro" onclick="setYN('f_funda',this)">Otro</button>
+        </div>
+        <textarea id="f_funda_detalle" class="detail-txt" placeholder="Comentarios (tipo de funda, dónde guarda las sucias, o detalla si elegiste Otro)…"></textarea>
       </div>
 
       <div class="field">
@@ -653,25 +673,6 @@
         </div>
       </div>
 
-      <div class="grid2">
-        <div class="field">
-          <label>¿Fibra blanca (lavado de vasos)?</label>
-          <div class="yn" id="f_fibra_yn">
-            <button type="button" data-val="si" onclick="setYN('f_fibra',this)">Sí</button>
-            <button type="button" data-val="no" onclick="setYN('f_fibra',this)">No</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>¿Paño blanco (secado de vasos)?</label>
-          <div class="yn" id="f_pano_yn">
-            <button type="button" data-val="si" onclick="setYN('f_pano',this)">Sí</button>
-            <button type="button" data-val="no" onclick="setYN('f_pano',this)">No</button>
-          </div>
-        </div>
-      </div>
-      <div class="field">
-        <textarea id="f_vasos_detalle" class="detail-txt" style="margin-top:0;" placeholder="Detalle adicional sobre el kit de vasos (fibra / paño) (opcional)…"></textarea>
-      </div>
 
       <div class="subhead">Preparación y conocimiento operativo</div>
       <div class="grid2">
@@ -744,11 +745,16 @@
       <div class="subhead">Evidencia fotográfica (opcional)</div>
       <div class="field">
         <label>Fotos de la habitación / carro (opcional)</label>
-        <input type="file" id="f_foto" accept="image/*" multiple>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <button type="button" class="secondary" onclick="document.getElementById('f_foto_cam').click()">📷 Tomar foto con la cámara</button>
+          <button type="button" class="secondary" onclick="document.getElementById('f_foto').click()">🖼️ Elegir de la galería</button>
+        </div>
+        <input type="file" id="f_foto_cam" accept="image/*" capture="environment" style="display:none;">
+        <input type="file" id="f_foto" accept="image/*" multiple style="display:none;">
         <div id="fotoPreviewWrap" style="margin-top:8px;display:none;">
           <div id="fotoPreviewGrid" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
         </div>
-        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">No son obligatorias. Puedes agregar varias, tomando fotos nuevas o eligiéndolas de tu galería.</div>
+        <div style="font-size:11.5px;color:var(--ink-soft);margin-top:5px;">No son obligatorias. Puedes tomar una foto con la cámara o elegir varias de la galería, y repetirlo las veces que necesites.</div>
       </div>
 
       <div class="field">
@@ -1068,7 +1074,8 @@ function setStatus(msg, isErr){
   el.className = 'status' + (isErr ? ' err' : '');
 }
 
-document.getElementById('f_foto').addEventListener('change', function(e){
+['f_foto','f_foto_cam'].forEach(function(id){ document.getElementById(id).addEventListener('change', handleFotoInput); });
+function handleFotoInput(e){
   const files = Array.from(e.target.files || []);
   files.forEach(file=>{
     const localIndex = selectedFotoFiles.length;
@@ -1080,7 +1087,7 @@ document.getElementById('f_foto').addEventListener('change', function(e){
     reader.readAsDataURL(file);
   });
   e.target.value = ''; // allow selecting more afterwards without losing previous picks
-});
+}
 
 function addFotoThumb(src, existingUrl, localIndex){
   document.getElementById('fotoPreviewWrap').style.display = 'block';
@@ -1111,6 +1118,7 @@ function resetFotoState(){
   selectedFotoFiles = [];
   existingFotoUrls = [];
   document.getElementById('f_foto').value = '';
+  const _cam = document.getElementById('f_foto_cam'); if(_cam) _cam.value = '';
   document.getElementById('fotoPreviewGrid').innerHTML = '';
   document.getElementById('fotoPreviewWrap').style.display = 'none';
 }
@@ -1220,6 +1228,10 @@ function toDbRow(e){
   o.casos_uso_humeda_detalle = e.casosUsoHumedaDetalle || '';
   o.limpia_mopa_detalle = e.limpiaMopaDetalle || '';
   o.vasos_detalle = e.vasosDetalle || '';
+  o.mopa_sustituye_escoba = e.mopaSust || '';
+  o.mopa_sustituye_detalle = e.mopaSustDetalle || '';
+  o.mopas_sucias_funda = e.funda || '';
+  o.mopas_sucias_funda_detalle = e.fundaDetalle || '';
   o.quien_prepara_detalle = e.quienPreparaDetalle || '';
   const sup = e.sup || {};
   SUP_QS.forEach(q=>{ o['sup_'+q.k] = sup[q.k] || ''; o['sup_'+q.k+'_c'] = sup[q.k+'c'] || ''; });
@@ -1235,6 +1247,10 @@ function fromDbRow(r){
   e.casosUsoHumedaDetalle = r.casos_uso_humeda_detalle || '';
   e.limpiaMopaDetalle = r.limpia_mopa_detalle || '';
   e.vasosDetalle = r.vasos_detalle || '';
+  e.mopaSust = r.mopa_sustituye_escoba || '';
+  e.mopaSustDetalle = r.mopa_sustituye_detalle || '';
+  e.funda = r.mopas_sucias_funda || '';
+  e.fundaDetalle = r.mopas_sucias_funda_detalle || '';
   e.quienPreparaDetalle = r.quien_prepara_detalle || '';
   e.sup = {};
   SUP_QS.forEach(q=>{ e.sup[q.k] = r['sup_'+q.k] || ''; e.sup[q.k+'c'] = r['sup_'+q.k+'_c'] || ''; });
@@ -1363,8 +1379,8 @@ async function saveEntry(){
     soaperUsoDetalle: document.getElementById('f_soaperuso_detalle').value.trim(),
     supervision: ynState['f_supervision'] || '',
     frecuencia: document.getElementById('f_frecuencia').value,
-    fibra: ynState['f_fibra'] || '',
-    pano: ynState['f_pano'] || '',
+    fibra: (editingId && (entries.find(x=>x.id===editingId)||{}).fibra) || '',
+    pano: (editingId && (entries.find(x=>x.id===editingId)||{}).pano) || '',
     quienPrepara: document.getElementById('f_quienprepara').value,
     humectacion: document.getElementById('f_humectacion').value,
     humectacionDetalle: document.getElementById('f_humectacion_detalle').value.trim(),
@@ -1381,7 +1397,11 @@ async function saveEntry(){
     casosUsoDetalle: document.getElementById('f_casosuso_detalle').value.trim(),
     casosUsoHumedaDetalle: document.getElementById('f_casosusohumeda_detalle').value.trim(),
     limpiaMopaDetalle: document.getElementById('f_limpiamopa_detalle').value.trim(),
-    vasosDetalle: document.getElementById('f_vasos_detalle').value.trim(),
+    vasosDetalle: (editingId && (entries.find(x=>x.id===editingId)||{}).vasosDetalle) || '',
+    mopaSust: ynState['f_mopasust'] || '',
+    mopaSustDetalle: document.getElementById('f_mopasust_detalle').value.trim(),
+    funda: ynState['f_funda'] || '',
+    fundaDetalle: document.getElementById('f_funda_detalle').value.trim(),
     quienPreparaDetalle: document.getElementById('f_quienprepara_detalle').value.trim()
   };
 
@@ -1443,7 +1463,7 @@ function clearForm(){
   document.getElementById('f_soaperuso_detalle').value = '';
   document.getElementById('soaperUsoWrap').style.display = 'none';
   resetFotoState();
-  ['f_categoria','f_color','f_soaper','f_supervision','f_fibra','f_pano','f_escoba','f_turno'].forEach(f=>{
+  ['f_categoria','f_color','f_soaper','f_supervision','f_escoba','f_mopasust','f_funda','f_turno'].forEach(f=>{
     delete ynState[f];
   });
   document.querySelectorAll('.yn button').forEach(b=>b.classList.remove('active-yes','active-no','active-neutral'));
@@ -1453,8 +1473,9 @@ function clearForm(){
   document.getElementById('f_casosuso_detalle').value = '';
   document.getElementById('f_casosusohumeda_detalle').value = '';
   document.getElementById('f_limpiamopa_detalle').value = '';
-  document.getElementById('f_vasos_detalle').value = '';
   document.getElementById('f_quienprepara_detalle').value = '';
+  document.getElementById('f_mopasust_detalle').value = '';
+  document.getElementById('f_funda_detalle').value = '';
   SUP_QS.forEach(q=>{ delete ynState['sq_'+q.k]; document.getElementById('sq_'+q.k+'_c').value = ''; });
   selectPerfil('camarista');
   editingId = null;
@@ -1509,16 +1530,17 @@ function editEntry(id){
   setBtn('f_categoria', e.categoria);
   setBtn('f_color', e.colorCod);
   setBtn('f_escoba', e.escobaBarrido);
+  setBtn('f_mopasust', e.mopaSust);
+  setBtn('f_funda', e.funda);
+  document.getElementById('f_funda_detalle').value = e.fundaDetalle || '';
+  document.getElementById('f_mopasust_detalle').value = e.mopaSustDetalle || '';
   setBtn('f_soaper', e.soaper);
   setBtn('f_supervision', e.supervision);
-  setBtn('f_fibra', e.fibra);
-  setBtn('f_pano', e.pano);
   document.getElementById('f_color_detalle').value = e.colorDetalle || '';
   document.getElementById('f_escoba_detalle').value = e.escobaDetalle || '';
   document.getElementById('f_casosuso_detalle').value = e.casosUsoDetalle || '';
   document.getElementById('f_casosusohumeda_detalle').value = e.casosUsoHumedaDetalle || '';
   document.getElementById('f_limpiamopa_detalle').value = e.limpiaMopaDetalle || '';
-  document.getElementById('f_vasos_detalle').value = e.vasosDetalle || '';
   document.getElementById('f_quienprepara_detalle').value = e.quienPreparaDetalle || '';
   SUP_QS.forEach(q=>{
     const s = e.sup || {};
@@ -1592,7 +1614,7 @@ function supTableRows(e){
       <td><span class="badge sup">Supervisora</span></td>
       <td>${esc(e.camarista)}</td>
       <td>${esc(e.habitacion)||'—'}</td>
-      <td colspan="4">Cuestionario de supervisora — ${supBadge(e)}</td>
+      <td colspan="3">Cuestionario de supervisora — ${supBadge(e)}</td>
       <td class="row-actions">
         <button class="toggle-detail" onclick="toggleDetail('${e.id}')">${expanded?'Ocultar':'Detalle'}</button>
         <button onclick="editEntry('${e.id}')">Editar</button>
@@ -1603,7 +1625,7 @@ function supTableRows(e){
   const fotoHtml = (e.fotoUrls && e.fotoUrls.length)
     ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${e.fotoUrls.map(u=>`<img src="${u}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--line);">`).join('')}</div>`
     : '—';
-  return main + `<tr class="detail-row"><td colspan="11"><dl class="detail-grid">
+  return main + `<tr class="detail-row"><td colspan="10"><dl class="detail-grid">
       ${supRowsHtml(e)}
       <div><dt>Levantado por</dt><dd>${esc(e.levantadoPor)||'—'}</dd></div>
       <div><dt>Hora de la visita</dt><dd>${e.hora||'—'}</dd></div>
@@ -1629,9 +1651,6 @@ function renderTable(){
     const soaperBadge = e.soaper==='si'
       ? `<span class="badge ${riesgo?'risk':'ok'}">${riesgo?'Sí — riesgo':'Sí'}</span>`
       : `<span class="badge na">No</span>`;
-    const vasos = (e.fibra==='si' && e.pano==='si') ? `<span class="badge ok">Completo</span>`
-      : (e.fibra==='si' || e.pano==='si') ? `<span class="badge risk">Parcial</span>`
-      : `<span class="badge na">No</span>`;
     const catBadge = e.categoria==='preferred' ? `<span class="badge ok">Preferred</span>` : e.categoria==='xhale' ? `<span class="badge info">X-hale</span>` : e.categoria==='regular' ? `<span class="badge na">Regular</span>` : '—';
     const expanded = expandedIds.has(e.id);
     const turnoBadge = e.turno==='nocturna' ? `<span class="badge info">Nocturna</span>` : e.turno==='diurna' ? `<span class="badge na">Diurna</span>` : '—';
@@ -1645,7 +1664,6 @@ function renderTable(){
       <td>${e.secas} seca / ${e.mojadas} moj.</td>
       <td>${(e.modoSeca||[]).join(', ')||'—'}</td>
       <td>${soaperBadge}${e.soaper==='si' && e.soaperUso.length ? `<div style="font-size:11px;color:var(--ink-soft);margin-top:3px;">${e.soaperUso.join(', ')}</div>` : ''}</td>
-      <td>${vasos}</td>
       <td class="row-actions">
         <button class="toggle-detail" onclick="toggleDetail('${e.id}')">${expanded?'Ocultar':'Detalle'}</button>
         <button onclick="editEntry('${e.id}')">Editar</button>
@@ -1656,7 +1674,7 @@ function renderTable(){
     const fotoHtml = (e.fotoUrls && e.fotoUrls.length)
       ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${e.fotoUrls.map(u=>`<img src="${u}" style="width:70px;height:70px;object-fit:cover;border-radius:6px;border:1px solid var(--line);">`).join('')}</div>`
       : '—';
-    const detailRow = `<tr class="detail-row"><td colspan="11">
+    const detailRow = `<tr class="detail-row"><td colspan="10">
       <dl class="detail-grid">
         <div><dt>Estado de habitación</dt><dd>${e.estado||'—'}</dd></div>
         <div><dt>Escoba en barrido inicial obligatorio</dt><dd>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':'—'}</dd></div>
@@ -1675,11 +1693,12 @@ function renderTable(){
         <div><dt>Detalle adicional (secuencia)</dt><dd>${e.secuenciaDetalle||'—'}</dd></div>
         <div><dt>Detalle adicional (codificación por color)</dt><dd>${esc(e.colorDetalle)||'—'}</dd></div>
         <div><dt>Detalle adicional (escoba / barrido)</dt><dd>${esc(e.escobaDetalle)||'—'}</dd></div>
+        <div><dt>Mopas sucias en la funda destinada (SOP §5.5)</dt><dd>${e.funda==='si'?'Sí':e.funda==='no'?'No':e.funda==='otro'?'Otro':'—'}${e.fundaDetalle?' — '+esc(e.fundaDetalle):''}</dd></div>
+        <div><dt>¿La mopa sustituye el uso de la escoba?</dt><dd>${e.mopaSust==='si'?'Sí':e.mopaSust==='no'?'No':e.mopaSust==='otro'?'Otro':'—'}${e.mopaSustDetalle?' — '+esc(e.mopaSustDetalle):''}</dd></div>
         <div><dt>Detalle adicional (casos de uso mopa seca)</dt><dd>${esc(e.casosUsoDetalle)||'—'}</dd></div>
         <div><dt>Detalle adicional (casos de uso mopa húmeda)</dt><dd>${esc(e.casosUsoHumedaDetalle)||'—'}</dd></div>
         <div><dt>Detalle adicional (limpieza de la mopa seca)</dt><dd>${esc(e.limpiaMopaDetalle)||'—'}</dd></div>
         <div><dt>Detalle adicional (quién prepara las mopas)</dt><dd>${esc(e.quienPreparaDetalle)||'—'}</dd></div>
-        <div><dt>Detalle adicional (kit de vasos)</dt><dd>${esc(e.vasosDetalle)||'—'}</dd></div>
         <div><dt>Levantado por</dt><dd>${e.levantadoPor||'—'}</dd></div>
         <div><dt>Hora de la visita</dt><dd>${e.hora||'—'}</dd></div>
         <div><dt>Foto</dt><dd>${fotoHtml}</dd></div>
@@ -1692,7 +1711,7 @@ function renderTable(){
   wrap.innerHTML = `<table>
     <thead><tr>
       <th>Fecha</th><th>Hotel</th><th>Turno</th><th>Categoría</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
-      <th>Modo mopa seca</th><th>Soaper</th><th>Vasos</th><th></th>
+      <th>Modo mopa seca</th><th>Soaper</th><th></th>
     </tr></thead>
     <tbody>${rows}</tbody>
   </table>`;
@@ -1704,13 +1723,11 @@ function renderSummary(){
   const riesgoCount = filtered.filter(isRiesgo).length;
   const avgSecas = total ? (filtered.reduce((s,e)=>s+Number(e.secas||0),0)/total).toFixed(1) : '0';
   const avgMojadas = total ? (filtered.reduce((s,e)=>s+Number(e.mojadas||0),0)/total).toFixed(1) : '0';
-  const vasosPct = total ? Math.round(100*filtered.filter(e=>e.fibra==='si' && e.pano==='si').length/total) : 0;
 
   document.getElementById('summaryCards').innerHTML = `
     <div class="card"><div class="num">${total + getFilteredAll().filter(isSup).length}</div><div class="lbl">Habitaciones registradas</div></div>
     <div class="card ${riesgoCount?'risk':''}"><div class="num">${riesgoCount}</div><div class="lbl">Uso de Soaper fuera de estándar</div></div>
     <div class="card"><div class="num">${avgSecas} / ${avgMojadas}</div><div class="lbl">Promedio mopas secas / húmedas</div></div>
-    <div class="card"><div class="num">${vasosPct}%</div><div class="lbl">Kit de vasos completo (fibra + paño)</div></div>
   `;
   try{ renderSopCompliance(); }catch(err){ console.error(err); }
 }
@@ -1776,13 +1793,6 @@ const SOP_CRITERIA = [
   { id:'color', pilar:'Pilar 1 – Ejecución Operativa de la Implementación', on:false, nosop:true,
     label:'Mopas secas codificadas por color',
     fn:e=> e.colorCod==='si'?100 : e.colorCod==='no'?0 : null },
-  { id:'kitvasos', pilar:'Pilar 3 – Infraestructura y Equipamiento', on:false, nosop:true,
-    label:'Kit de vasos completo: fibra blanca y paño blanco',
-    fn:e=>{
-      if(!e.fibra && !e.pano) return null;
-      const n=(e.fibra==='si'?1:0)+(e.pano==='si'?1:0);
-      return n===2?100 : n===1?50 : 0;
-    }}
 ];
 let sopEnabled = {};
 try{ sopEnabled = JSON.parse(localStorage.getItem(SOP_STORE_KEY)||'{}')||{}; }catch(err){ sopEnabled = {}; }
@@ -2116,8 +2126,6 @@ function exportExcel(){
     'Autorización de supervisión (Soaper)': e.supervision==='si'?'Sí':e.supervision==='no'?'No':'',
     'Frecuencia declarada (Soaper)': e.frecuencia||'',
     'Fuera de estándar SOP': isRiesgo(e)?'SÍ - RIESGO':'',
-    'Fibra blanca': e.fibra==='si'?'Sí':e.fibra==='no'?'No':'',
-    'Paño blanco': e.pano==='si'?'Sí':e.pano==='no'?'No':'',
     'Quién prepara las mopas': e.quienPrepara||'',
     'Método de humectación de mopas': e.humectacion||'',
     'Detalle adicional (humectación)': e.humectacionDetalle||'',
@@ -2126,11 +2134,14 @@ function exportExcel(){
     'Detalle adicional (secuencia)': e.secuenciaDetalle||'',
     'Detalle (codificación por color)': e.colorDetalle||'',
     'Detalle (escoba / barrido)': e.escobaDetalle||'',
+    'Mopas sucias en la funda destinada': e.funda==='si'?'Sí':e.funda==='no'?'No':e.funda==='otro'?'Otro':'',
+    'Comentarios (funda de mopas sucias)': e.fundaDetalle||'',
+    '¿La mopa sustituye el uso de la escoba?': e.mopaSust==='si'?'Sí':e.mopaSust==='no'?'No':e.mopaSust==='otro'?'Otro':'',
+    'Comentarios (mopa vs. escoba)': e.mopaSustDetalle||'',
     'Detalle (casos de uso mopa seca)': e.casosUsoDetalle||'',
     'Detalle (casos de uso mopa húmeda)': e.casosUsoHumedaDetalle||'',
     'Detalle (limpieza de la mopa seca)': e.limpiaMopaDetalle||'',
     'Detalle (quién prepara las mopas)': e.quienPreparaDetalle||'',
-    'Detalle (kit de vasos)': e.vasosDetalle||'',
     'Levantado por': e.levantadoPor||'',
     'Hora de la visita': e.hora||'',
     'Fotos (URLs)': (e.fotoUrls||[]).join(' | '),
@@ -2188,7 +2199,6 @@ function exportPDF(){
       <td>${(e.modoSeca||[]).join(', ')}</td>
       <td>${e.escobaBarrido==='si'?'Sí':e.escobaBarrido==='no'?'No':''}</td>
       <td class="${riesgo?'pr-risk':''}">${e.soaper==='si'?(riesgo?'Sí — riesgo':'Sí'):'No'}${e.soaper==='si'&&e.soaperUso.length?'<br><span style="font-weight:400;">'+e.soaperUso.join(', ')+'</span>':''}</td>
-      <td>${e.fibra==='si'?'Sí':'No'} / ${e.pano==='si'?'Sí':'No'}</td>
       <td>${e.quienPrepara||''}</td>
       <td>${e.fotoUrls&&e.fotoUrls.length?`<img src="${e.fotoUrls[0]}">${e.fotoUrls.length>1?'<br><span style="font-size:8px;">+'+(e.fotoUrls.length-1)+' más</span>':''}`:''}</td>
     </tr>`;
@@ -2209,7 +2219,7 @@ function exportPDF(){
     <table>
       <thead><tr>
         <th>Fecha</th><th>Hotel</th><th>Turno</th><th>Categ.</th><th>Camarista</th><th>Hab.</th><th>Mopas</th>
-        <th>Modo mopa seca</th><th>Escoba</th><th>Soaper</th><th>Fibra/Paño</th><th>Prepara mopas</th><th>Foto</th>
+        <th>Modo mopa seca</th><th>Escoba</th><th>Soaper</th><th>Prepara mopas</th><th>Foto</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -2249,13 +2259,14 @@ function exportWord(){
       ${row('Mopas codificadas por color', yn(e.colorCod)+(e.colorDetalle?' — '+esc(e.colorDetalle):''))}
       ${row('Momento / uso de la mopa seca', esc((e.modoSeca||[]).join(' | '))+(e.modoSecaDetalle?' — '+esc(e.modoSecaDetalle):''))}
       ${row('Escoba en barrido inicial', yn(e.escobaBarrido)+(e.escobaDetalle?' — '+esc(e.escobaDetalle):''))}
+      ${row('Mopas sucias en la funda destinada', (e.funda==='si'?'Sí':e.funda==='no'?'No':e.funda==='otro'?'Otro':'—')+(e.fundaDetalle?' — '+esc(e.fundaDetalle):''))}
+      ${row('¿La mopa sustituye el uso de la escoba?', (e.mopaSust==='si'?'Sí':e.mopaSust==='no'?'No':e.mopaSust==='otro'?'Otro':'—')+(e.mopaSustDetalle?' — '+esc(e.mopaSustDetalle):''))}
       ${row('Casos de uso mopa seca', esc((e.casosUso||[]).join(' | '))+(e.casosUsoDetalle?' — '+esc(e.casosUsoDetalle):''))}
       ${row('Casos de uso mopa húmeda', esc((e.casosUsoHumeda||[]).join(' | '))+(e.casosUsoHumedaDetalle?' — '+esc(e.casosUsoHumedaDetalle):''))}
       ${row('Cómo limpia la mopa seca', esc(e.limpiaMopa)+(e.limpiaMopaDetalle?' — '+esc(e.limpiaMopaDetalle):''))}
       ${row('Uso de Soaper / Trapeador', yn(e.soaper)+(e.soaper==='si'?(isRiesgo(e)?' (fuera de estándar SOP)':''):''))}
       ${e.soaper==='si'?row('Para qué se usó el Soaper', esc((e.soaperUso||[]).join(' | '))+(e.soaperUsoDetalle?' — '+esc(e.soaperUsoDetalle):'')):''}
       ${e.soaper==='si'?row('Autorización de supervisión / frecuencia', yn(e.supervision)+' / '+esc(e.frecuencia||'—')):''}
-      ${row('Fibra blanca / paño blanco', yn(e.fibra)+' / '+yn(e.pano)+(e.vasosDetalle?' — '+esc(e.vasosDetalle):''))}
       ${row('Quién prepara las mopas', esc(e.quienPrepara)+(e.quienPreparaDetalle?' — '+esc(e.quienPreparaDetalle):''))}
       ${row('Humectación / dosificación', esc(e.humectacion)+(e.humectacionDetalle?' — '+esc(e.humectacionDetalle):''))}
       ${row('Producto químico para vasos', esc(e.productoVasos))}
