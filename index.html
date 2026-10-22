@@ -697,6 +697,7 @@
             <option>Cubo con agua</option>
             <option>Vaso destinado para los paños</option>
             <option>10 gatillazos de multiusos y 2 litros de agua, utilizando la placa perforada para humedecer las mopas</option>
+            <option>10 gatillazos de multiusos y 1 litro de agua (turno nocturno), utilizando la placa perforada para humedecer las mopas</option>
             <option>Otro</option>
           </select>
           <textarea id="f_humectacion_detalle" placeholder="Detalle adicional sobre la preparación/humectación (opcional)…" style="margin-top:8px;"></textarea>
@@ -1734,11 +1735,16 @@ const SOP_CRITERIA = [
       if(h>=10 && s>=10) return 100; if(h+s>=20) return 50; return 0;
     }},
   { id:'humectacion', pilar:'Pilar 1', on:true, tpl:[0,0],
-    label:'Preparación de la mopa: 10 gatillazos de multiusos en 2 L de agua (SOP 5.2)',
+    label:'Preparación de la mopa: 10 gatillazos de multiusos en 2 L de agua (turno diurno) o 1 L (turno nocturno) (SOP 5.2)',
     fn:e=>{
       const v=e.humectacion||'';
       if(!v || v==='Otro') return null;
-      if(v.indexOf('10 gatillazos')>=0) return 100;
+      if(v.indexOf('10 gatillazos')>=0){
+        /* Diurno: 2 L + 10 gatillazos. Nocturno: 1 L + 10 gatillazos.
+           Un registro diurno con la dosis de 1 L es parcial; los registros nocturnos con la opción de 2 L se mantienen en 100 (era la única opción disponible antes). */
+        if(e.turno==='diurna' && v.indexOf('1 litro')>=0) return 50;
+        return 100;
+      }
       if(v==='Solución multiusos') return 50;
       return 0;
     }},
