@@ -793,7 +793,7 @@
           <li>Cada registro se compara con el SOP PL-ALOJ-008: cumple = 100, parcial = 50, no cumple = 0. Lo que no se respondió no cuenta.</li>
           <li>Primero se promedian las habitaciones de cada camarista, para que todas pesen igual, y después se promedian las camaristas del hotel.</li>
           <li>El % del hotel es el promedio de los criterios activos. Estado: 90% o más Implementación Consolidada, 71 a 89% Requiere Seguimiento, 70% o menos Requiere Intervención Prioritaria.</li>
-          <li>Meta de muestra: entre 20 y 30 camaristas distintas por hotel. Escribe siempre el nombre de la camarista de la misma forma.</li>
+          <li>Meta de muestra: entre 20 y 30 camaristas distintas por hotel. Escribe siempre el nombre de la camarista de la misma forma. Las supervisoras entrevistadas cuentan como una persona más de la muestra: su cuestionario puntúa dosificación, dotación, secuencia y uso/autorización del trapeador (las preguntas 5 y 6 quedan como información complementaria).</li>
         </ul>
       </div>
       <div class="subhead">Criterios que puntúan</div>
@@ -1809,7 +1809,31 @@ function sopCompute(list){
       (C.sc[c.id] = C.sc[c.id] || []).push(v);
     });
   });
-  getFilteredAll().filter(isSup).forEach(e=>{ if(byHotel[e.hotel]) byHotel[e.hotel].rooms++; });
+  /* Supervisoras entrevistadas: cuentan como una persona más (peso igual) y puntúan los criterios que cubre su cuestionario */
+  const supScore = v => v==='cumple'?100 : v==='parcial'?50 : v==='nocumple'?0 : null;
+  getFilteredAll().filter(isSup).forEach(e=>{
+    if(!e.hotel) return;
+    const H = byHotel[e.hotel] || (byHotel[e.hotel] = {rooms:0, cam:{}});
+    H.rooms++;
+    const key = 'sup:' + (e.camarista||'').trim().toLowerCase().replace(/\s+/g,' ');
+    if(key === 'sup:') return;
+    const C = H.cam[key] || (H.cam[key] = {name:e.camarista, rooms:0, sc:{}, sup:true});
+    C.rooms++;
+    const q = e.sup || {};
+    const map = {
+      humectacion: q.q1,
+      [e.turno==='nocturna' ? 'dotacion_nocturna' : 'dotacion_diurna']: q.q2,
+      secuencia: q.q3,
+      trapeador_uso: q.q4,
+      trapeador_auth: q.q4
+    };
+    active.forEach(c=>{
+      if(!(c.id in map)) return;
+      const v = supScore(map[c.id]);
+      if(v==null) return;
+      (C.sc[c.id] = C.sc[c.id] || []).push(v);
+    });
+  });
   return Object.keys(byHotel).map(h=>{
     const H = byHotel[h];
     const cams = Object.values(H.cam);
@@ -1828,7 +1852,7 @@ function sopCompute(list){
 function sopCell(p,n){
   if(p==null) return '<td class="pct"><span class="sop-badge n">—</span></td>';
   const st = sopStatus(Math.round(p));
-  return `<td class="pct"><span class="sop-badge ${st.cls}">${Math.round(p)}%</span><small>${n} camaristas</small></td>`;
+  return `<td class="pct"><span class="sop-badge ${st.cls}">${Math.round(p)}%</span><small>${n} personas</small></td>`;
 }
 function renderSopCompliance(){
   const cfg = document.getElementById('sopConfig');
