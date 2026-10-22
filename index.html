@@ -420,6 +420,20 @@
   .sop-matrix td.pct{text-align:center;font-weight:700;white-space:nowrap;}
   .sop-matrix td.pct small{display:block;font-weight:400;color:var(--ink-soft);font-size:10.5px;}
   .sop-matrix tfoot td{font-weight:700;background:#fbfaf7;border-top:2px solid var(--line);}
+  .obs-top{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:12px 0 16px;}
+  .obs-top label{font-size:12px;font-weight:600;color:var(--navy);display:block;margin-bottom:4px;}
+  .obs-top select,.obs-top input{width:100%;padding:9px 10px;border:1px solid #cbd3e1;border-radius:8px;font:inherit;}
+  .obs-row{border:1px solid #dfe5f0;border-radius:10px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  .obs-row .obs-lab{font-weight:600;font-size:13.5px;margin-bottom:8px;}
+  .obs-row .obs-pil{font-size:11px;color:var(--ink-soft);font-weight:500;margin-left:6px;}
+  .obs-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .obs-btns button{padding:7px 14px;border-radius:8px;border:1px solid #cbd3e1;background:#fff;cursor:pointer;font:inherit;font-size:13px;}
+  .obs-btns button.on-c{background:var(--ok-bg);border-color:var(--ok);color:var(--ok);font-weight:600;}
+  .obs-btns button.on-p{background:#FFF4DB;border-color:#b7791f;color:#8a5a00;font-weight:600;}
+  .obs-btns button.on-n{background:var(--risk-bg);border-color:var(--risk);color:var(--risk);font-weight:600;}
+  .obs-btns button.on-na{background:#EAEEF5;border-color:var(--navy);color:var(--navy);font-weight:600;}
+  .obs-row textarea{width:100%;min-height:54px;padding:8px 10px;border:1px solid #cbd3e1;border-radius:8px;font:inherit;font-size:13px;resize:vertical;}
+  #obsMsg{font-size:12.5px;color:var(--ink-soft);align-self:center;}
 </style>
 </head>
 <body>
@@ -786,6 +800,29 @@
       <div class="table-wrap" id="tableWrap"></div>
     </div>
     <div class="foot-note">Estándar SOP: el Soaper/Trapeador está restringido a limpieza profunda excepcional (máx. cada 20 días, con autorización de supervisión) — no a limpieza diaria de habitación regular. Un registro se marca en rojo si se usó sin autorización de supervisión, con frecuencia diaria o semanal, o en una habitación regular de limpieza diaria.</div>
+  </section>
+
+  <section class="panel" id="obsPanel">
+    <div class="panel-head" onclick="togglePanel('obsPanel')">
+      <h2>Observación en sitio (criterios que verificas tú en los recorridos)</h2>
+      <span class="chev">▾</span>
+    </div>
+    <div class="panel-body">
+      <div class="info-box">
+        <strong>¿Para qué sirve?</strong> Aquí registras lo que ves tú misma en el recorrido (sistema completo, técnica en 8, funda, lavandería, etc.). No depende de las entrevistas. Elige el hotel y la fecha, marca Cumple / Parcial / No cumple / N/A y escribe el comentario (al marcar Cumple se llena un texto base que puedes editar). Al pulsar <em>Generar evaluación para la plataforma</em>, estos criterios entran solos en el Check List, el puntaje, las oportunidades y el plan de acción. Lo que dejes sin marcar queda N/A.
+      </div>
+      <div class="obs-top">
+        <div><label for="obsHotel">Hotel</label><select id="obsHotel" onchange="obsLoadCurrent()"></select></div>
+        <div><label for="obsFecha">Fecha del recorrido</label><input type="date" id="obsFecha" onchange="obsLoadCurrent()"></div>
+        <div><label for="obsEval">Evaluadora</label><input type="text" id="obsEval" value="Erika Quispe"></div>
+      </div>
+      <div id="obsList"></div>
+      <div class="actions">
+        <button class="secondary" type="button" onclick="obsAllCumple()">Marcar los vacíos como Cumple</button>
+        <button type="button" onclick="obsSave()" style="background:var(--navy);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;">Guardar observación</button>
+        <span id="obsMsg"></span>
+      </div>
+    </div>
   </section>
 
   <section class="panel" id="sopPanel">
@@ -1897,7 +1934,8 @@ function renderSopCompliance(){
           <div style="font-size:11.5px;color:var(--ink-soft);">${faltan}</div></td>
         <td>${d.rooms}</td>
         <td><span class="sop-num">${d.total==null?'—':Math.round(d.total)+'%'}</span>
-          <div style="font-size:11.5px;color:var(--ink-soft);">En la plataforma: ${d.totalPlat==null?'—':Math.round(d.totalPlat)+'%'}</div></td>
+          <div style="font-size:11.5px;color:var(--ink-soft);">En la plataforma (entrevistas): ${d.totalPlat==null?'—':Math.round(d.totalPlat)+'%'}</div>
+          ${(()=>{ const t=sopTotalWithObs(d); return t==null?'':'<div style="font-size:11.5px;color:var(--navy);font-weight:600;">Con observación en sitio: '+Math.round(t)+'%</div>'; })()}</td>
         <td><span class="sop-badge ${st.cls}">${st.text}</span></td>
       </tr>`;}).join('')}</tbody></table>`;
   const active = SOP_CRITERIA.filter(sopIsOn);
@@ -1909,6 +1947,106 @@ function renderSopCompliance(){
       const st=sopStatus(d.total==null?null:Math.round(d.total));
       return `<td class="pct"><span class="sop-badge ${st.cls}">${d.total==null?'—':Math.round(d.total)+'%'}</span></td>`;}).join('')}</tr></tfoot>
   </table>`;
+}
+
+/* ===== Observación en sitio (criterios que verifica la evaluadora) ===== */
+const OBS_TABLE = 'vileda_obs_sitio', OBS_LS = 'vileda_obs_sitio_v1';
+const OBS_ITEMS = [
+  {key:'0_1', pil:'Pilar 1', label:'Una mopa húmeda por habitación, sin reutilización entre habitaciones (SOP 5.10)', def:'Verificado por observación directa en campo: se emplea una mopa húmeda por habitación, sin reutilización entre habitaciones.'},
+  {key:'0_3', pil:'Pilar 1', label:'Técnica de mopeado en forma de 8, del fondo de la habitación hacia la puerta (SOP 5.4)', def:'Verificado por observación directa en campo: la técnica de mopeado se ejecuta en forma de 8, del fondo de la habitación hacia la puerta.'},
+  {key:'0_4', pil:'Pilar 1', label:'Colocación y retiro de la mopa en el soporte, con los clips y con los pies (SOP 5.3, 5.5)', def:'Verificado por observación directa en campo: la colocación y el retiro de la mopa en el soporte se realiza según el procedimiento, con los clips y con los pies.'},
+  {key:'0_5', pil:'Pilar 1', label:'Mopas usadas en la funda destinada para mopas sucias (SOP 5.5, 6)', def:'Verificado en campo: las camaristas depositan las mopas usadas en la funda destinada para mopas sucias.'},
+  {key:'0_8', pil:'Pilar 1', label:'Se respetan las excepciones de piso (coralina, piedra caliza porosa) (SOP 5.7, 5.13)', def:'', defNA:''},
+  {key:'1_0', pil:'Pilar 2', label:'Sistema ClickSpeed completo y en buen estado de funcionamiento (SOP 5.1)', def:'Verificado en campo: las camaristas cuentan con el sistema ClickSpeed completo y en buen estado de funcionamiento.'},
+  {key:'1_1', pil:'Pilar 2', label:'Mopas de microfibra sin desgaste que afecte su desempeño (SOP 3.2)', def:'Verificado en campo: las mopas no presentan desgaste que afecte su desempeño.', defNA:'Se observa desgaste en parte de las mopas. No se puntúa porque no depende del desempeño del equipo: la reposición se retomó desde nivel gerencial y se inyectará stock de forma gradual hasta completarlo.'},
+  {key:'1_2', pil:'Pilar 2', label:'Soaper disponible y operativo para los casos autorizados (SOP 5.1, 5.8)', def:'Verificado en campo: el Soaper está disponible y operativo para los casos en que se autorice su uso.'},
+  {key:'1_3', pil:'Pilar 2', label:'La solución preparada mantiene la concentración del SOP (SOP 5.2)', def:'Verificado en campo: la solución preparada mantiene la concentración establecida en el SOP.', defNA:'Validación verbal, no verificable en piso: cuando las camaristas están en piso las mopas ya están preparadas.'},
+  {key:'2_2', pil:'Pilar 3', label:'Disponibilidad diaria de mopas limpias, con lavado en la lavandería (SOP 6)', def:'Verificado en campo: hay disponibilidad diaria de mopas limpias, con lavado realizado en la lavandería del hotel.'},
+  {key:'2_3', pil:'Pilar 3', label:'Contenedor de mopas con tapa disponible y en uso por cada camarista (SOP 5.1)', def:'Verificado en campo: el contenedor de mopas con tapa está disponible y en uso activo por cada camarista.'},
+  {key:'2_4', pil:'Pilar 3', label:'Producto Daily Desinfectante/Multiuso disponible en cantidad suficiente (SOP 5.2)', def:'Verificado en campo: el producto está disponible en cantidad suficiente para la operación diaria.'}
+];
+let obsRecords = [];
+let obsState = {items:{}};
+function obsLocalRead(){ try{ return JSON.parse(localStorage.getItem(OBS_LS)||'[]')||[]; }catch(err){ return []; } }
+function obsLocalWrite(){ try{ localStorage.setItem(OBS_LS, JSON.stringify(obsRecords)); }catch(err){} }
+function obsMsg(t,err){ const m=document.getElementById('obsMsg'); if(m){ m.textContent=t||''; m.style.color = err?'#b42318':'var(--ink-soft)'; } }
+async function obsLoadAll(){
+  obsRecords = obsLocalRead();
+  if(supabaseReady){
+    try{
+      const { data, error } = await supabaseClient.from(OBS_TABLE).select('*');
+      if(error) throw error;
+      obsRecords = (data||[]).map(r=>({id:r.id, hotel:r.hotel, fecha:r.fecha, evaluador:r.evaluador||'', items:r.items||{}}));
+      obsLocalWrite();
+    }catch(e){
+      obsMsg('Aún no existe la tabla de observaciones en Supabase: se guarda solo en este navegador. Ejecuta el SQL de la observación en sitio.', true);
+    }
+  }
+  obsLoadCurrent();
+  renderSopCompliance();
+}
+function obsId(h,f){ return h+'|'+f; }
+function obsLoadCurrent(){
+  const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value;
+  const rec = obsRecords.find(r=>r.id===obsId(h,f));
+  obsState = {items: rec ? JSON.parse(JSON.stringify(rec.items||{})) : {}};
+  if(rec && rec.evaluador) document.getElementById('obsEval').value = rec.evaluador;
+  obsRender();
+}
+function obsRender(){
+  const box = document.getElementById('obsList'); if(!box) return;
+  const B = (k,r,cls,txt)=>`<button type="button" class="${(obsState.items[k]||{}).result===r?cls:''}" onclick="obsSet('${k}','${r}')">${txt}</button>`;
+  box.innerHTML = OBS_ITEMS.map(it=>{
+    const st = obsState.items[it.key] || {};
+    return `<div class="obs-row"><div class="obs-lab">${it.label}<span class="obs-pil">${it.pil}</span></div>
+      <div class="obs-btns">${B(it.key,'cumple','on-c','Cumple')}${B(it.key,'parcial','on-p','Parcial')}${B(it.key,'nocumple','on-n','No cumple')}${B(it.key,'na','on-na','N/A')}</div>
+      <textarea placeholder="Comentario de lo observado…" oninput="obsText('${it.key}', this.value)">${(st.obs||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea></div>`;
+  }).join('');
+}
+function obsSet(key,res){
+  const it = OBS_ITEMS.find(x=>x.key===key); const st = obsState.items[key] || (obsState.items[key]={result:'',obs:''});
+  const prevDefaults = [it.def, it.defNA||''];
+  st.result = res;
+  if(!st.obs || prevDefaults.indexOf(st.obs)>=0){
+    st.obs = res==='cumple' ? it.def : res==='na' ? (it.defNA||'') : '';
+  }
+  obsRender();
+}
+function obsText(key,v){ const st = obsState.items[key] || (obsState.items[key]={result:'',obs:''}); st.obs = v; }
+function obsAllCumple(){
+  OBS_ITEMS.forEach(it=>{ const st = obsState.items[it.key]; if(!st || !st.result){ obsState.items[it.key] = {result:'cumple', obs: it.def}; } });
+  obsRender();
+}
+async function obsSave(){
+  const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value, ev = document.getElementById('obsEval').value.trim();
+  if(!h || !f){ alert('Elige el hotel y la fecha del recorrido.'); return; }
+  const items = {}; OBS_ITEMS.forEach(it=>{ const st = obsState.items[it.key]; if(st && st.result) items[it.key] = {result:st.result, obs:(st.obs||'').trim()}; });
+  const rec = {id:obsId(h,f), hotel:h, fecha:f, evaluador:ev, items};
+  const i = obsRecords.findIndex(r=>r.id===rec.id); if(i>=0) obsRecords[i]=rec; else obsRecords.push(rec);
+  obsLocalWrite();
+  let remote = false;
+  if(supabaseReady){
+    try{
+      const { error } = await supabaseClient.from(OBS_TABLE).upsert({id:rec.id, hotel:h, fecha:f, evaluador:ev, items, updated_at:new Date().toISOString()}, {onConflict:'id'});
+      if(error) throw error; remote = true;
+    }catch(e){ obsMsg('Guardado solo en este navegador (Supabase: '+e.message+')', true); }
+  }
+  if(remote) obsMsg('Observación guardada ('+Object.keys(items).length+' criterios).');
+  renderSopCompliance();
+}
+function sopObsFor(hotel){
+  const mine = obsRecords.filter(r=>r.hotel===hotel); if(!mine.length) return null;
+  const inR = mine.filter(r=>(!dateFrom||r.fecha>=dateFrom)&&(!dateTo||r.fecha<=dateTo));
+  const pool = (inR.length?inR:mine).slice().sort((a,b)=>a.fecha<b.fecha?1:-1);
+  return pool[0];
+}
+function sopTotalWithObs(d){
+  const o = sopObsFor(d.hotel); if(!o) return null;
+  const st = [];
+  Object.keys(d.crit).forEach(k=>{ const p=d.crit[k].pct; if(p!=null) st.push(Math.round(p)>=90?100:Math.round(p)>=50?50:0); });
+  const taken = new Set(SOP_CRITERIA.filter(sopIsOn).map(c=>c.tpl?c.tpl[0]+'_'+c.tpl[1]:''));
+  Object.keys(o.items||{}).forEach(k=>{ if(taken.has(k)) return; const r=o.items[k].result; if(r==='cumple') st.push(100); else if(r==='parcial') st.push(50); else if(r==='nocumple') st.push(0); });
+  return st.length ? st.reduce((a,b)=>a+b,0)/st.length : null;
 }
 
 /* ===== Evaluaciones para la plataforma ===== */
@@ -1926,7 +2064,8 @@ function sopBuildPlatformRecords(list){
     const evaluator = Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0] || 'Erika Quispe';
     const byPos = {}; active.forEach(c=>{ byPos[c.tpl[0]+'_'+c.tpl[1]] = c; });
     const checklist = [], opportunities = [], actions = [];
-    let total=0, count=0, nPar=0, nNo=0;
+    let total=0, count=0, nPar=0, nNo=0, nObs=0;
+    const obsRec = sopObsFor(d.hotel); const obsMap = obsRec ? (obsRec.items||{}) : {};
     const recs = [];
     SOP_PLATFORM_TEMPLATE.forEach((blk,bi)=>{
       blk.items.forEach((item,ii)=>{
@@ -1940,6 +2079,13 @@ function sopBuildPlatformRecords(list){
           obs = `Entrevistas: ${cams.length} camaristas con dato; ${nc} cumplen, ${np} parcial, ${nn} no cumplen (promedio ${Math.round(cd.pct)}%).`;
           if(result==='cumple'){ total+=100; } else if(result==='parcial'){ total+=50; nPar++; } else { nNo++; }
           count++;
+        }
+        const oo = obsMap[bi+'_'+ii];
+        if(oo && result==='na' && !(c && cd && cd.pct!=null)){
+          obs = oo.obs || '';
+          if(oo.result==='cumple'){ result='cumple'; total+=100; count++; nObs++; }
+          else if(oo.result==='parcial'){ result='parcial'; total+=50; nPar++; count++; nObs++; }
+          else if(oo.result==='nocumple'){ result='nocumple'; nNo++; count++; nObs++; }
         }
         checklist.push({block:blk.block, item, result, obs, evidenceName:'', editable:false});
         if(result==='parcial' || result==='nocumple'){
@@ -1961,7 +2107,7 @@ function sopBuildPlatformRecords(list){
       property:{}, visitDate:dates[dates.length-1]||'', evaluator, hotelDirector:'', corporateDirector:'Glenys Silverio',
       manager:'', area:'Ama de llaves', checkinArea:'', operationalUnits:[], shift:'', score, status,
       checklist, opportunities, actions,
-      generalComments:`Evaluación generada a partir de ${d.camaristas} camaristas entrevistadas (${d.rooms} habitaciones) entre ${dates[0]||''} y ${dates[dates.length-1]||''}, aplicando el SOP PL-ALOJ-008. Los criterios que no se miden en las entrevistas quedan como N/A y pueden completarse en el check list de la plataforma.`,
+      generalComments:`Evaluación generada a partir de ${d.camaristas} camaristas entrevistadas (${d.rooms} habitaciones) entre ${dates[0]||''} y ${dates[dates.length-1]||''}, aplicando el SOP PL-ALOJ-008. ${nObs?`Además se incluyen ${nObs} criterio(s) verificados por observación directa en campo${obsRec&&obsRec.fecha?' ('+obsRec.fecha+')':''}. `:''}Los criterios que no se miden quedan como N/A y pueden completarse en el check list de la plataforma.`,
       conclusions:`La evaluación obtuvo ${score}% (${status}). Se registraron ${nNo} criterio(s) No cumple y ${nPar} criterio(s) Parcial.`,
       recommendations:recs.join('\n'), corporateSupport:'No', supportNeeded:'', nextVisitDate:'', nextVisitObjective:'',
       source:'entrevistas-vileda', interviewStats:{camaristas:d.camaristas, habitaciones:d.rooms, desde:dates[0]||'', hasta:dates[dates.length-1]||''}
@@ -2311,7 +2457,13 @@ ${supL.length?`<h2>Cuestionarios de supervisoras</h2>${detSup}`:''}
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
-loadEntries();
+(function obsInit(){
+  const sel = document.getElementById('obsHotel');
+  sel.innerHTML = HOTELS.map(h=>`<option value="${h}">${h}</option>`).join('');
+  document.getElementById('obsFecha').value = todayStr();
+  obsRender();
+})();
+loadEntries().then(()=>obsLoadAll());
 </script>
 </body>
 </html>
