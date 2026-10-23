@@ -814,7 +814,7 @@
       <div class="obs-top">
         <div><label for="obsHotel">Hotel</label><select id="obsHotel" onchange="obsLoadCurrent()"></select></div>
         <div><label for="obsFecha">Fecha del recorrido</label><input type="date" id="obsFecha" onchange="obsLoadCurrent()"></div>
-        <div><label for="obsPersona">Camarista (persona) observada</label><input type="text" id="obsPersona" placeholder="Nombre y apellido" onchange="obsLoadCurrent()"></div>
+        <div><label for="obsPersona">Camarista (persona) observada</label><input type="text" id="obsPersona" list="obsNames" placeholder="Nombre y apellido (elige de la lista)" onchange="obsLoadCurrent()"><datalist id="obsNames"></datalist></div>
         <div><label for="obsEval">Evaluadora</label><input type="text" id="obsEval" value="Erika Quispe"></div>
       </div>
       <div id="obsList"></div>
@@ -1994,9 +1994,19 @@ async function obsLoadAll(){
   obsRenderHistory();
   renderSopCompliance();
 }
+function obsFillNames(){
+  const dl=document.getElementById('obsNames'); if(!dl) return;
+  const h=document.getElementById('obsHotel').value, f=document.getElementById('obsFecha').value;
+  const seen={}; 
+  (entries||[]).filter(e=>e.hotel===h && e.camarista).forEach(e=>{ const k=obsNorm(e.camarista); if(!seen[k]) seen[k]={name:e.camarista.trim(), same:false}; if(e.fecha===f) seen[k].same=true; });
+  const done = new Set(obsRecords.filter(r=>r.hotel===h && r.fecha===f).map(r=>obsNorm(obsPersonaOf(r))));
+  const list = Object.keys(seen).map(k=>seen[k]).sort((a,b)=> (b.same-a.same) || a.name.localeCompare(b.name));
+  dl.innerHTML = list.map(x=>`<option value="${x.name.replace(/"/g,'&quot;')}">${x.same?'entrevistada ese día':'entrevistada'}${done.has(obsNorm(x.name))?' · ya observada':''}</option>`).join('');
+}
 function obsLoadCurrent(){
   const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value, pers = document.getElementById('obsPersona').value;
   const rec = obsRecords.find(r=>r.id===obsId(h,f,pers));
+  obsFillNames();
   obsState = {items: {}};
   if(rec){ obsKeys(rec.items).forEach(k=>{ obsState.items[k] = JSON.parse(JSON.stringify(rec.items[k])); }); if(rec.evaluador) document.getElementById('obsEval').value = rec.evaluador; }
   obsRender();
@@ -2121,7 +2131,7 @@ async function obsSave(){
   else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}${obsBannerBtns(rec.id)}`, false);
   obsMsg('');
   obsState = {items:{}}; document.getElementById('obsPersona').value=''; obsRender();   /* formulario limpio para la siguiente persona */
-  obsRenderHistory();
+  obsRenderHistory(); obsFillNames();
   renderSopCompliance();
 }
 /* Une las observaciones de todas las personas del hotel: promedio por criterio -> estado de plataforma */
