@@ -809,11 +809,12 @@
     </div>
     <div class="panel-body">
       <div class="info-box">
-        <strong>¿Para qué sirve?</strong> Aquí registras lo que ves tú misma en el recorrido (sistema completo, técnica en 8, funda, lavandería, etc.). No depende de las entrevistas. Elige el hotel y la fecha, marca Cumple / Parcial / No cumple / N/A y escribe el comentario (al marcar Cumple se llena un texto base que puedes editar). Al pulsar <em>Generar evaluación para la plataforma</em>, estos criterios entran solos en el Check List, el puntaje, las oportunidades y el plan de acción. Lo que dejes sin marcar queda N/A.
+        <strong>¿Para qué sirve?</strong> Aquí registras lo que ves tú misma en el recorrido (sistema completo, técnica en 8, funda, lavandería, etc.). No depende de las entrevistas. Hay <strong>una observación por cada persona</strong>: elige el hotel y la fecha, escribe el nombre de la camarista, marca Cumple / Parcial / No cumple / N/A y escribe el comentario (al marcar Cumple se llena un texto base que puedes editar). Al pulsar <em>Generar evaluación para la plataforma</em>, las observaciones de todas las personas del hotel se promedian por criterio y entran solas en el Check List, el puntaje, las oportunidades y el plan de acción. Al guardar, el formulario se limpia para registrar a la siguiente persona. Lo que dejes sin marcar queda N/A.
       </div>
       <div class="obs-top">
         <div><label for="obsHotel">Hotel</label><select id="obsHotel" onchange="obsLoadCurrent()"></select></div>
         <div><label for="obsFecha">Fecha del recorrido</label><input type="date" id="obsFecha" onchange="obsLoadCurrent()"></div>
+        <div><label for="obsPersona">Camarista (persona) observada</label><input type="text" id="obsPersona" placeholder="Nombre y apellido" onchange="obsLoadCurrent()"></div>
         <div><label for="obsEval">Evaluadora</label><input type="text" id="obsEval" value="Erika Quispe"></div>
       </div>
       <div id="obsList"></div>
@@ -1952,7 +1953,7 @@ function renderSopCompliance(){
   </table>`;
 }
 
-/* ===== Observación en sitio (criterios que verifica la evaluadora) ===== */
+/* ===== Observación en sitio (una observación por persona observada) ===== */
 const OBS_TABLE = 'vileda_obs_sitio', OBS_LS = 'vileda_obs_sitio_v1';
 const OBS_ITEMS = [
   {key:'0_1', pil:'Pilar 1', label:'Una mopa húmeda por habitación, sin reutilización entre habitaciones (SOP 5.10)', def:'Verificado por observación directa en campo: se emplea una mopa húmeda por habitación, sin reutilización entre habitaciones.'},
@@ -1970,6 +1971,10 @@ const OBS_ITEMS = [
 ];
 let obsRecords = [];
 let obsState = {items:{}};
+function obsNorm(t){ return String(t||'').trim().toLowerCase().replace(/\s+/g,' '); }
+function obsId(h,f,pers){ const n=obsNorm(pers); return n ? h+'|'+f+'|'+n : h+'|'+f; }
+function obsKeys(items){ return Object.keys(items||{}).filter(k=>k.charAt(0)!=='_'); }
+function obsPersonaOf(r){ return (r.items && r.items._persona) || (String(r.id||'').split('|')[2]||''); }
 function obsLocalRead(){ try{ return JSON.parse(localStorage.getItem(OBS_LS)||'[]')||[]; }catch(err){ return []; } }
 function obsLocalWrite(){ try{ localStorage.setItem(OBS_LS, JSON.stringify(obsRecords)); }catch(err){} }
 function obsMsg(t,err){ const m=document.getElementById('obsMsg'); if(m){ m.textContent=t||''; m.style.color = err?'#b42318':'var(--ink-soft)'; } }
@@ -1989,12 +1994,11 @@ async function obsLoadAll(){
   obsRenderHistory();
   renderSopCompliance();
 }
-function obsId(h,f){ return h+'|'+f; }
 function obsLoadCurrent(){
-  const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value;
-  const rec = obsRecords.find(r=>r.id===obsId(h,f));
-  obsState = {items: rec ? JSON.parse(JSON.stringify(rec.items||{})) : {}};
-  if(rec && rec.evaluador) document.getElementById('obsEval').value = rec.evaluador;
+  const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value, pers = document.getElementById('obsPersona').value;
+  const rec = obsRecords.find(r=>r.id===obsId(h,f,pers));
+  obsState = {items: {}};
+  if(rec){ obsKeys(rec.items).forEach(k=>{ obsState.items[k] = JSON.parse(JSON.stringify(rec.items[k])); }); if(rec.evaluador) document.getElementById('obsEval').value = rec.evaluador; }
   obsRender();
 }
 function obsRender(){
@@ -2030,36 +2034,50 @@ function obsBanner(html, ok){
   b.innerHTML = html;
   try{ b.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
 }
-function obsBannerBtns(h,f){
-  return `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="secondary" onclick="obsExportWord('${h}','${f}')">Descargar hoja en Word</button><button type="button" class="secondary" onclick="obsNew()">Nueva observación</button></div>`;
+function obsBannerBtns(id){
+  const q = encodeURIComponent(id);
+  return `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="secondary" onclick="obsExportWord(decodeURIComponent('${q}'))">Descargar hoja en Word</button><button type="button" class="secondary" onclick="obsNew()">Registrar otra persona</button></div>`;
 }
 function obsCounts(items){
   const c={cumple:0,parcial:0,nocumple:0,na:0};
-  Object.keys(items||{}).forEach(k=>{ const r=items[k].result; if(c[r]!==undefined) c[r]++; });
+  obsKeys(items).forEach(k=>{ const r=items[k].result; if(c[r]!==undefined) c[r]++; });
   return c;
 }
 function obsRenderHistory(){
   const box=document.getElementById('obsHistory'); if(!box) return;
-  const list=obsRecords.slice().sort((a,b)=> a.fecha<b.fecha?1:-1);
+  const list=obsRecords.slice().sort((a,b)=> a.fecha<b.fecha?1:a.fecha>b.fecha?-1:(a.hotel+obsPersonaOf(a)).localeCompare(b.hotel+obsPersonaOf(b)));
   if(!list.length){ box.innerHTML='<div class="info-box">Todavía no hay observaciones guardadas.</div>'; return; }
-  box.innerHTML='<table><thead><tr><th>Hotel</th><th>Fecha</th><th>Evaluadora</th><th>Criterios</th><th></th></tr></thead><tbody>'+list.map(r=>{
-    const c=obsCounts(r.items);
-    return `<tr><td><strong>${r.hotel}</strong></td><td>${r.fecha}</td><td>${r.evaluador||'—'}</td>
-      <td>${Object.keys(r.items||{}).length} (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})</td>
-      <td style="white-space:nowrap"><button type="button" class="secondary" onclick="obsOpen('${r.hotel}','${r.fecha}')">Abrir</button> <button type="button" class="secondary" onclick="obsExportWord('${r.hotel}','${r.fecha}')">Word</button></td></tr>`;
+  box.innerHTML='<table><thead><tr><th>Hotel</th><th>Fecha</th><th>Persona observada</th><th>Evaluadora</th><th>Criterios</th><th></th></tr></thead><tbody>'+list.map(r=>{
+    const c=obsCounts(r.items), q=encodeURIComponent(r.id);
+    return `<tr><td><strong>${r.hotel}</strong></td><td>${r.fecha}</td><td>${(obsPersonaOf(r)||'(recorrido general)').replace(/</g,'&lt;')}</td><td>${r.evaluador||'—'}</td>
+      <td>${obsKeys(r.items).length} (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})</td>
+      <td style="white-space:nowrap"><button type="button" class="secondary" onclick="obsOpen(decodeURIComponent('${q}'))">Abrir</button> <button type="button" class="secondary" onclick="obsExportWord(decodeURIComponent('${q}'))">Word</button> <button type="button" class="secondary" style="color:#b42318;" onclick="obsDelete(decodeURIComponent('${q}'))">Eliminar</button></td></tr>`;
   }).join('')+'</tbody></table>';
 }
-function obsOpen(h,f){
-  document.getElementById('obsHotel').value=h; document.getElementById('obsFecha').value=f; obsLoadCurrent();
+async function obsDelete(id){
+  const r = obsRecords.find(x=>x.id===id); if(!r) return;
+  if(!confirm('¿Eliminar la observación de '+(obsPersonaOf(r)||'recorrido general')+' ('+r.hotel+' · '+r.fecha+')? Esto no se puede deshacer.')) return;
+  obsRecords = obsRecords.filter(x=>x.id!==id); obsLocalWrite();
+  if(supabaseReady){ try{ const { error } = await supabaseClient.from(OBS_TABLE).delete().eq('id', id); if(error) throw error; }catch(e){ obsBanner('⚠️ Se quitó de este navegador, pero no se pudo borrar en Supabase: '+(e.message||e), false); } }
+  obsRenderHistory(); obsLoadCurrent(); renderSopCompliance();
+}
+function obsOpen(id){
+  const r = obsRecords.find(x=>x.id===id); if(!r) return;
+  document.getElementById('obsHotel').value=r.hotel; document.getElementById('obsFecha').value=r.fecha; document.getElementById('obsPersona').value=obsPersonaOf(r);
+  obsLoadCurrent();
   try{ document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
 }
-function obsExportWord(h,f){
-  const rec = obsRecords.find(r=>r.id===obsId(h,f));
+function obsNew(){
+  obsState = {items:{}}; document.getElementById('obsPersona').value=''; obsRender();
+  try{ document.getElementById('obsPersona').focus(); document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
+}
+function obsExportWord(id){
+  const rec = obsRecords.find(r=>r.id===id);
   if(!rec){ alert('No se encontró esa observación.'); return; }
   const esc = t => String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   const lab = {cumple:'Cumple',parcial:'Parcial',nocumple:'No cumple',na:'N/A'};
   const bg = {cumple:'#e3f4ea;color:#1e7e4f',parcial:'#fff4db;color:#8a5a00',nocumple:'#fde8e6;color:#b42318',na:'#eceff4;color:#475467'};
-  const c = obsCounts(rec.items);
+  const c = obsCounts(rec.items), pers = obsPersonaOf(rec);
   const rows = OBS_ITEMS.map(it=>{ const x=(rec.items||{})[it.key];
     return `<tr><td>${esc(it.label)}<br><span style="color:#5f8f95;font-size:8.5pt">${esc(it.pil)}</span></td>
       <td style="text-align:center;font-weight:bold;background:${x?bg[x.result]:'#fff;color:#98a2b3'}">${x?lab[x.result]:'Sin evaluar'}</td><td>${x?esc(x.obs):''}</td></tr>`; }).join('');
@@ -2069,27 +2087,25 @@ function obsExportWord(h,f){
   .eyebrow{color:#5f8f95;font-size:9pt;letter-spacing:1px} table{border-collapse:collapse;width:100%} th{background:#164d57;color:#fff;text-align:left;padding:4pt 6pt;font-size:9.5pt} td{border:1px solid #cfd8dc;padding:4pt 6pt;vertical-align:top;font-size:9.5pt}</style></head><body>
   <div class="eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
   <h1>Observación en sitio — Sistema Vileda (Ama de llaves)</h1>
-  <p>Hotel: <b>${esc(rec.hotel)}</b> · Fecha del recorrido: <b>${esc(rec.fecha)}</b> · Evaluadora: <b>${esc(rec.evaluador||'—')}</b><br>
+  <p>Hotel: <b>${esc(rec.hotel)}</b> · Fecha del recorrido: <b>${esc(rec.fecha)}</b> · Persona observada: <b>${esc(pers||'Recorrido general')}</b> · Evaluadora: <b>${esc(rec.evaluador||'—')}</b><br>
   Resumen: Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na}</p>
   <table><thead><tr><th style="width:42%">Criterio verificado en campo</th><th style="width:10%">Resultado</th><th>Observación</th></tr></thead><tbody>${rows}</tbody></table>
   </body></html>`;
   const blob = new Blob(['﻿', html], {type:'application/msword;charset=utf-8'});
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `Observacion_en_sitio_${rec.hotel}_${rec.fecha}.doc`;
+  a.download = `Observacion_en_sitio_${rec.hotel}_${rec.fecha}_${(pers||'general').replace(/[^A-Za-z0-9áéíóúñÁÉÍÓÚÑ]+/g,'_')}.doc`;
   document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
-}
-function obsNew(){
-  obsState = {items:{}}; obsRender();
-  const b=document.getElementById('obsBanner'); if(b) b.style.display='none';
-  try{ document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
 }
 async function obsSave(){
   const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value, ev = document.getElementById('obsEval').value.trim();
+  const pers = document.getElementById('obsPersona').value.trim();
   if(!h || !f){ alert('Elige el hotel y la fecha del recorrido.'); return; }
+  if(!pers){ obsBanner('<strong>Falta el nombre:</strong> escribe la camarista (o persona) observada. Hay una observación por cada persona.', false); try{ document.getElementById('obsPersona').focus(); }catch(e){} return; }
   const items = {}; OBS_ITEMS.forEach(it=>{ const st = obsState.items[it.key]; if(st && st.result) items[it.key] = {result:st.result, obs:(st.obs||'').trim()}; });
   if(!Object.keys(items).length){ obsBanner('<strong>No se guardó nada:</strong> marca al menos un criterio (Cumple, Parcial, No cumple o N/A).', false); return; }
-  const rec = {id:obsId(h,f), hotel:h, fecha:f, evaluador:ev, items};
-  const i = obsRecords.findIndex(r=>r.id===rec.id); if(i>=0) obsRecords[i]=rec; else obsRecords.push(rec);
+  items._persona = pers;
+  const rec = {id:obsId(h,f,pers), hotel:h, fecha:f, evaluador:ev, items};
+  const i = obsRecords.findIndex(r=>r.id===rec.id); const wasUpdate = i>=0; if(i>=0) obsRecords[i]=rec; else obsRecords.push(rec);
   obsLocalWrite();
   let remote = false, errMsg = '';
   if(supabaseReady){
@@ -2099,18 +2115,45 @@ async function obsSave(){
     }catch(e){ errMsg = e.message || String(e); }
   } else { errMsg = 'Supabase no está configurado en este navegador.'; }
   const c = obsCounts(items), hora = new Date().toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'});
-  const resumen = `${h} · ${f} · ${Object.keys(items).length} criterios (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})`;
-  if(remote) obsBanner(`✅ <strong>Observación guardada en la nube a las ${hora}.</strong><br>${resumen}<br><span style="font-size:12.5px;">Entra en la evaluación de la plataforma al pulsar “Generar evaluación para la plataforma”.</span>${obsBannerBtns(h,f)}`, true);
-  else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}<br><span style="font-size:12.5px;">Ejecuta el SQL de la observación en sitio y vuelve a pulsar Guardar.</span>${obsBannerBtns(h,f)}`, false);
+  const total = obsRecords.filter(r=>r.hotel===h && r.fecha===f).length;
+  const resumen = `${pers} · ${h} · ${f} · ${obsKeys(items).length} criterios (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})${wasUpdate?' · se actualizó el registro existente de esta persona':''}<br>Llevas ${total} persona(s) observada(s) en ${h} el ${f}.`;
+  if(remote) obsBanner(`✅ <strong>Observación guardada en la nube a las ${hora}.</strong><br>${resumen}${obsBannerBtns(rec.id)}`, true);
+  else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}${obsBannerBtns(rec.id)}`, false);
   obsMsg('');
+  obsState = {items:{}}; document.getElementById('obsPersona').value=''; obsRender();   /* formulario limpio para la siguiente persona */
   obsRenderHistory();
   renderSopCompliance();
 }
+/* Une las observaciones de todas las personas del hotel: promedio por criterio -> estado de plataforma */
 function sopObsFor(hotel){
   const mine = obsRecords.filter(r=>r.hotel===hotel); if(!mine.length) return null;
   const inR = mine.filter(r=>(!dateFrom||r.fecha>=dateFrom)&&(!dateTo||r.fecha<=dateTo));
-  const pool = (inR.length?inR:mine).slice().sort((a,b)=>a.fecha<b.fecha?1:-1);
-  return pool[0];
+  const pool = inR.length ? inR : mine;
+  const fechas = pool.map(r=>r.fecha).sort();
+  const agg = {};
+  OBS_ITEMS.forEach(it=>{
+    const sc=[], nas=[];
+    pool.forEach(r=>{ const x=(r.items||{})[it.key]; if(!x||!x.result) return;
+      const who = obsPersonaOf(r) || 'recorrido general';
+      if(x.result==='na'){ if(x.obs) nas.push(x.obs); return; }
+      sc.push({v:x.result==='cumple'?100:x.result==='parcial'?50:0, who, obs:x.obs||''});
+    });
+    if(sc.length){
+      const avg = sc.reduce((a,b)=>a+b.v,0)/sc.length, r = Math.round(avg);
+      const result = r>=90?'cumple' : r>=50?'parcial' : 'nocumple';
+      let obs;
+      if(sc.length===1) obs = sc[0].obs;
+      else {
+        const nc=sc.filter(x=>x.v===100).length, np=sc.filter(x=>x.v===50).length, nn=sc.filter(x=>x.v===0).length;
+        const notes = sc.filter(x=>x.v<100 && x.obs).map(x=>x.who+': '+x.obs);
+        obs = `Observación directa en campo en ${sc.length} personas: ${nc} cumplen, ${np} parcial, ${nn} no cumplen (promedio ${r}%).` + (notes.length?' '+notes.join(' | '):'');
+      }
+      agg[it.key] = {result, obs};
+    } else if(nas.length){
+      agg[it.key] = {result:'na', obs:nas[0]};
+    }
+  });
+  return {hotel, fecha:fechas[fechas.length-1], fechas, n:pool.length, items:agg};
 }
 function sopTotalWithObs(d){
   const o = sopObsFor(d.hotel); if(!o) return null;
@@ -2179,7 +2222,7 @@ function sopBuildPlatformRecords(list){
       property:{}, visitDate:dates[dates.length-1]||'', evaluator, hotelDirector:'', corporateDirector:'Glenys Silverio',
       manager:'', area:'Ama de llaves', checkinArea:'', operationalUnits:[], shift:'', score, status,
       checklist, opportunities, actions,
-      generalComments:`Evaluación generada a partir de ${d.camaristas} camaristas entrevistadas (${d.rooms} habitaciones) entre ${dates[0]||''} y ${dates[dates.length-1]||''}, aplicando el SOP PL-ALOJ-008. ${nObs?`Además se incluyen ${nObs} criterio(s) verificados por observación directa en campo${obsRec&&obsRec.fecha?' ('+obsRec.fecha+')':''}. `:''}Los criterios que no se miden quedan como N/A y pueden completarse en el check list de la plataforma.`,
+      generalComments:`Evaluación generada a partir de ${d.camaristas} camaristas entrevistadas (${d.rooms} habitaciones) entre ${dates[0]||''} y ${dates[dates.length-1]||''}, aplicando el SOP PL-ALOJ-008. ${nObs?`Además se incluyen ${nObs} criterio(s) verificados por observación directa en campo (${obsRec&&obsRec.n?obsRec.n+' observación(es) individuales':'observación en sitio'}${obsRec&&obsRec.fecha?', hasta el '+obsRec.fecha:''}). `:''}Los criterios que no se miden quedan como N/A y pueden completarse en el check list de la plataforma.`,
       conclusions:`La evaluación obtuvo ${score}% (${status}). Se registraron ${nNo} criterio(s) No cumple y ${nPar} criterio(s) Parcial.`,
       recommendations:recs.join('\n'), corporateSupport:'No', supportNeeded:'', nextVisitDate:'', nextVisitObjective:'',
       source:'entrevistas-vileda', interviewStats:{camaristas:d.camaristas, habitaciones:d.rooms, desde:dates[0]||'', hasta:dates[dates.length-1]||''}
