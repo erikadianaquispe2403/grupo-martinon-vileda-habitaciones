@@ -822,6 +822,9 @@
         <button type="button" onclick="obsSave()" style="background:var(--navy);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer;">Guardar observación</button>
         <span id="obsMsg"></span>
       </div>
+      <div id="obsBanner" style="display:none;margin-top:12px;padding:12px 14px;border-radius:10px;font-size:13.5px;"></div>
+      <div class="subhead" style="margin-top:18px;">Observaciones guardadas</div>
+      <div id="obsHistory"></div>
     </div>
   </section>
 
@@ -1983,6 +1986,7 @@ async function obsLoadAll(){
     }
   }
   obsLoadCurrent();
+  obsRenderHistory();
   renderSopCompliance();
 }
 function obsId(h,f){ return h+'|'+f; }
@@ -2017,21 +2021,56 @@ function obsAllCumple(){
   OBS_ITEMS.forEach(it=>{ const st = obsState.items[it.key]; if(!st || !st.result){ obsState.items[it.key] = {result:'cumple', obs: it.def}; } });
   obsRender();
 }
+function obsBanner(html, ok){
+  const b=document.getElementById('obsBanner'); if(!b) return;
+  b.style.display='block';
+  b.style.background = ok ? '#e3f4ea' : '#fff4db';
+  b.style.border = '1px solid ' + (ok ? '#1e7e4f' : '#b7791f');
+  b.style.color = ok ? '#14532d' : '#7a4f00';
+  b.innerHTML = html;
+  try{ b.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
+}
+function obsCounts(items){
+  const c={cumple:0,parcial:0,nocumple:0,na:0};
+  Object.keys(items||{}).forEach(k=>{ const r=items[k].result; if(c[r]!==undefined) c[r]++; });
+  return c;
+}
+function obsRenderHistory(){
+  const box=document.getElementById('obsHistory'); if(!box) return;
+  const list=obsRecords.slice().sort((a,b)=> a.fecha<b.fecha?1:-1);
+  if(!list.length){ box.innerHTML='<div class="info-box">Todavía no hay observaciones guardadas.</div>'; return; }
+  box.innerHTML='<table><thead><tr><th>Hotel</th><th>Fecha</th><th>Evaluadora</th><th>Criterios</th><th></th></tr></thead><tbody>'+list.map(r=>{
+    const c=obsCounts(r.items);
+    return `<tr><td><strong>${r.hotel}</strong></td><td>${r.fecha}</td><td>${r.evaluador||'—'}</td>
+      <td>${Object.keys(r.items||{}).length} (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})</td>
+      <td><button type="button" class="secondary" onclick="obsOpen('${r.hotel}','${r.fecha}')">Abrir</button></td></tr>`;
+  }).join('')+'</tbody></table>';
+}
+function obsOpen(h,f){
+  document.getElementById('obsHotel').value=h; document.getElementById('obsFecha').value=f; obsLoadCurrent();
+  try{ document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
+}
 async function obsSave(){
   const h = document.getElementById('obsHotel').value, f = document.getElementById('obsFecha').value, ev = document.getElementById('obsEval').value.trim();
   if(!h || !f){ alert('Elige el hotel y la fecha del recorrido.'); return; }
   const items = {}; OBS_ITEMS.forEach(it=>{ const st = obsState.items[it.key]; if(st && st.result) items[it.key] = {result:st.result, obs:(st.obs||'').trim()}; });
+  if(!Object.keys(items).length){ obsBanner('<strong>No se guardó nada:</strong> marca al menos un criterio (Cumple, Parcial, No cumple o N/A).', false); return; }
   const rec = {id:obsId(h,f), hotel:h, fecha:f, evaluador:ev, items};
   const i = obsRecords.findIndex(r=>r.id===rec.id); if(i>=0) obsRecords[i]=rec; else obsRecords.push(rec);
   obsLocalWrite();
-  let remote = false;
+  let remote = false, errMsg = '';
   if(supabaseReady){
     try{
       const { error } = await supabaseClient.from(OBS_TABLE).upsert({id:rec.id, hotel:h, fecha:f, evaluador:ev, items, updated_at:new Date().toISOString()}, {onConflict:'id'});
       if(error) throw error; remote = true;
-    }catch(e){ obsMsg('Guardado solo en este navegador (Supabase: '+e.message+')', true); }
-  }
-  if(remote) obsMsg('Observación guardada ('+Object.keys(items).length+' criterios).');
+    }catch(e){ errMsg = e.message || String(e); }
+  } else { errMsg = 'Supabase no está configurado en este navegador.'; }
+  const c = obsCounts(items), hora = new Date().toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'});
+  const resumen = `${h} · ${f} · ${Object.keys(items).length} criterios (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})`;
+  if(remote) obsBanner(`✅ <strong>Observación guardada en la nube a las ${hora}.</strong><br>${resumen}<br><span style="font-size:12.5px;">Entra en la evaluación de la plataforma al pulsar “Generar evaluación para la plataforma”.</span>`, true);
+  else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}<br><span style="font-size:12.5px;">Ejecuta el SQL de la observación en sitio y vuelve a pulsar Guardar.</span>`, false);
+  obsMsg('');
+  obsRenderHistory();
   renderSopCompliance();
 }
 function sopObsFor(hotel){
