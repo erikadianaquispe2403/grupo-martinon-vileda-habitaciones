@@ -2030,6 +2030,9 @@ function obsBanner(html, ok){
   b.innerHTML = html;
   try{ b.scrollIntoView({behavior:'smooth', block:'nearest'}); }catch(e){}
 }
+function obsBannerBtns(h,f){
+  return `<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="secondary" onclick="obsExportWord('${h}','${f}')">Descargar hoja en Word</button><button type="button" class="secondary" onclick="obsNew()">Nueva observación</button></div>`;
+}
 function obsCounts(items){
   const c={cumple:0,parcial:0,nocumple:0,na:0};
   Object.keys(items||{}).forEach(k=>{ const r=items[k].result; if(c[r]!==undefined) c[r]++; });
@@ -2043,11 +2046,41 @@ function obsRenderHistory(){
     const c=obsCounts(r.items);
     return `<tr><td><strong>${r.hotel}</strong></td><td>${r.fecha}</td><td>${r.evaluador||'—'}</td>
       <td>${Object.keys(r.items||{}).length} (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})</td>
-      <td><button type="button" class="secondary" onclick="obsOpen('${r.hotel}','${r.fecha}')">Abrir</button></td></tr>`;
+      <td style="white-space:nowrap"><button type="button" class="secondary" onclick="obsOpen('${r.hotel}','${r.fecha}')">Abrir</button> <button type="button" class="secondary" onclick="obsExportWord('${r.hotel}','${r.fecha}')">Word</button></td></tr>`;
   }).join('')+'</tbody></table>';
 }
 function obsOpen(h,f){
   document.getElementById('obsHotel').value=h; document.getElementById('obsFecha').value=f; obsLoadCurrent();
+  try{ document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
+}
+function obsExportWord(h,f){
+  const rec = obsRecords.find(r=>r.id===obsId(h,f));
+  if(!rec){ alert('No se encontró esa observación.'); return; }
+  const esc = t => String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const lab = {cumple:'Cumple',parcial:'Parcial',nocumple:'No cumple',na:'N/A'};
+  const bg = {cumple:'#e3f4ea;color:#1e7e4f',parcial:'#fff4db;color:#8a5a00',nocumple:'#fde8e6;color:#b42318',na:'#eceff4;color:#475467'};
+  const c = obsCounts(rec.items);
+  const rows = OBS_ITEMS.map(it=>{ const x=(rec.items||{})[it.key];
+    return `<tr><td>${esc(it.label)}<br><span style="color:#5f8f95;font-size:8.5pt">${esc(it.pil)}</span></td>
+      <td style="text-align:center;font-weight:bold;background:${x?bg[x.result]:'#fff;color:#98a2b3'}">${x?lab[x.result]:'Sin evaluar'}</td><td>${x?esc(x.obs):''}</td></tr>`; }).join('');
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>Observación en sitio</title>
+  <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
+  <style>@page{size:A4 landscape;margin:1.5cm} body{font-family:Calibri,Arial,sans-serif;font-size:10.5pt;color:#1f2937} h1{color:#0b2f36;font-size:18pt;margin:0 0 4pt}
+  .eyebrow{color:#5f8f95;font-size:9pt;letter-spacing:1px} table{border-collapse:collapse;width:100%} th{background:#164d57;color:#fff;text-align:left;padding:4pt 6pt;font-size:9.5pt} td{border:1px solid #cfd8dc;padding:4pt 6pt;vertical-align:top;font-size:9.5pt}</style></head><body>
+  <div class="eyebrow">GRUPO MARTINÓN · DIRECCIÓN CORPORATIVA DE IMPLEMENTACIÓN Y PROCESOS</div>
+  <h1>Observación en sitio — Sistema Vileda (Ama de llaves)</h1>
+  <p>Hotel: <b>${esc(rec.hotel)}</b> · Fecha del recorrido: <b>${esc(rec.fecha)}</b> · Evaluadora: <b>${esc(rec.evaluador||'—')}</b><br>
+  Resumen: Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na}</p>
+  <table><thead><tr><th style="width:42%">Criterio verificado en campo</th><th style="width:10%">Resultado</th><th>Observación</th></tr></thead><tbody>${rows}</tbody></table>
+  </body></html>`;
+  const blob = new Blob(['﻿', html], {type:'application/msword;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `Observacion_en_sitio_${rec.hotel}_${rec.fecha}.doc`;
+  document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function obsNew(){
+  obsState = {items:{}}; obsRender();
+  const b=document.getElementById('obsBanner'); if(b) b.style.display='none';
   try{ document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
 }
 async function obsSave(){
@@ -2067,8 +2100,8 @@ async function obsSave(){
   } else { errMsg = 'Supabase no está configurado en este navegador.'; }
   const c = obsCounts(items), hora = new Date().toLocaleTimeString('es-DO',{hour:'2-digit',minute:'2-digit'});
   const resumen = `${h} · ${f} · ${Object.keys(items).length} criterios (Cumple ${c.cumple} · Parcial ${c.parcial} · No cumple ${c.nocumple} · N/A ${c.na})`;
-  if(remote) obsBanner(`✅ <strong>Observación guardada en la nube a las ${hora}.</strong><br>${resumen}<br><span style="font-size:12.5px;">Entra en la evaluación de la plataforma al pulsar “Generar evaluación para la plataforma”.</span>`, true);
-  else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}<br><span style="font-size:12.5px;">Ejecuta el SQL de la observación en sitio y vuelve a pulsar Guardar.</span>`, false);
+  if(remote) obsBanner(`✅ <strong>Observación guardada en la nube a las ${hora}.</strong><br>${resumen}<br><span style="font-size:12.5px;">Entra en la evaluación de la plataforma al pulsar “Generar evaluación para la plataforma”.</span>${obsBannerBtns(h,f)}`, true);
+  else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}<br><span style="font-size:12.5px;">Ejecuta el SQL de la observación en sitio y vuelve a pulsar Guardar.</span>${obsBannerBtns(h,f)}`, false);
   obsMsg('');
   obsRenderHistory();
   renderSopCompliance();
