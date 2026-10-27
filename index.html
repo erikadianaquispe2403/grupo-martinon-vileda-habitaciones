@@ -812,11 +812,12 @@
         <strong>¿Para qué sirve?</strong> Aquí registras lo que ves tú misma en el recorrido (sistema completo, técnica en 8, funda, lavandería, etc.). No depende de las entrevistas. Hay <strong>una observación por cada persona</strong>: elige el hotel y la fecha, escribe el nombre de la camarista, marca Cumple / Parcial / No cumple / N/A y escribe el comentario (al marcar Cumple se llena un texto base que puedes editar). Al pulsar <em>Generar evaluación para la plataforma</em>, las observaciones de todas las personas del hotel se promedian por criterio y entran solas en el Check List, el puntaje, las oportunidades y el plan de acción. Al guardar, el formulario se limpia para registrar a la siguiente persona. Lo que dejes sin marcar queda N/A.
       </div>
       <div class="obs-top">
-        <div><label for="obsHotel">Hotel</label><select id="obsHotel" onchange="obsLoadCurrent()"></select></div>
-        <div><label for="obsFecha">Fecha del recorrido</label><input type="date" id="obsFecha" onchange="obsLoadCurrent()"></div>
+        <div><label for="obsHotel">Hotel</label><select id="obsHotel" onchange="obsContextChanged()"></select></div>
+        <div><label for="obsFecha">Fecha del recorrido</label><input type="date" id="obsFecha" onchange="obsContextChanged()"></div>
         <div><label for="obsPersona">Camarista (persona) observada</label><input type="text" id="obsPersona" list="obsNames" placeholder="Nombre y apellido (elige de la lista)" onchange="obsLoadCurrent()"><datalist id="obsNames"></datalist></div>
-        <div><label for="obsEval">Evaluadora</label><input type="text" id="obsEval" value="Erika Quispe"></div>
+        <div><label for="obsEval">Evaluadora</label><input type="text" id="obsEval" value="Erika Quispe" onchange="obsPrefsSave()"></div>
       </div>
+      <div id="obsPend" style="font-size:12.5px;color:var(--ink-soft);margin:-6px 0 12px;"></div>
       <div id="obsList"></div>
       <div class="actions">
         <button class="secondary" type="button" onclick="obsAllCumple()">Marcar los vacíos como Cumple</button>
@@ -1990,10 +1991,37 @@ async function obsLoadAll(){
       obsMsg('Aún no existe la tabla de observaciones en Supabase: se guarda solo en este navegador. Ejecuta el SQL de la observación en sitio.', true);
     }
   }
-  obsLoadCurrent();
+  obsSuggestNext();
   obsRenderHistory();
   renderSopCompliance();
 }
+const OBS_PREFS_KEY = 'vileda_obs_prefs_v1';
+function obsPrefsSave(){
+  try{ localStorage.setItem(OBS_PREFS_KEY, JSON.stringify({hotel:document.getElementById('obsHotel').value, fecha:document.getElementById('obsFecha').value, eval:document.getElementById('obsEval').value, day:todayStr()})); }catch(e){}
+}
+function obsPrefsLoad(){ try{ return JSON.parse(localStorage.getItem(OBS_PREFS_KEY)||'null'); }catch(e){ return null; } }
+/* Entrevistadas del hotel y día del formulario, en el orden en que se capturaron */
+function obsInterviewed(){
+  const h=document.getElementById('obsHotel').value, f=document.getElementById('obsFecha').value;
+  const seen={}, out=[];
+  (entries||[]).filter(e=>e.hotel===h && e.fecha===f && e.camarista)
+    .sort((a,b)=> String(a.hora||'').localeCompare(String(b.hora||'')) || String(a.createdAt||'').localeCompare(String(b.createdAt||'')))
+    .forEach(e=>{ const k=obsNorm(e.camarista); if(!seen[k]){ seen[k]=1; out.push(e.camarista.trim()); } });
+  return out;
+}
+function obsPendientes(){
+  const h=document.getElementById('obsHotel').value, f=document.getElementById('obsFecha').value;
+  const done = new Set(obsRecords.filter(r=>r.hotel===h && r.fecha===f).map(r=>obsNorm(obsPersonaOf(r))));
+  return obsInterviewed().filter(n=>!done.has(obsNorm(n)));
+}
+function obsSuggestNext(){
+  const inp=document.getElementById('obsPersona'); const pend=obsPendientes(); const all=obsInterviewed();
+  inp.value = pend.length ? pend[0] : '';
+  const info=document.getElementById('obsPend');
+  if(info) info.textContent = all.length ? (pend.length ? `Entrevistadas ese día: ${all.length} · pendientes de observar: ${pend.length}. Te dejé a la siguiente; puedes cambiar el nombre.` : `Ya observaste a las ${all.length} entrevistadas de ese día. Escribe un nombre si quieres registrar a otra persona.`) : 'No hay entrevistas capturadas de ese hotel y fecha: escribe el nombre de la persona observada.';
+  obsLoadCurrent();
+}
+function obsContextChanged(){ obsPrefsSave(); obsSuggestNext(); }
 function obsFillNames(){
   const dl=document.getElementById('obsNames'); if(!dl) return;
   const h=document.getElementById('obsHotel').value, f=document.getElementById('obsFecha').value;
@@ -2078,7 +2106,7 @@ function obsOpen(id){
   try{ document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
 }
 function obsNew(){
-  obsState = {items:{}}; document.getElementById('obsPersona').value=''; obsRender();
+  obsState = {items:{}}; obsSuggestNext();
   try{ document.getElementById('obsPersona').focus(); document.getElementById('obsPanel').scrollIntoView({behavior:'smooth'}); }catch(e){}
 }
 function obsExportWord(id){
@@ -2130,7 +2158,8 @@ async function obsSave(){
   if(remote) obsBanner(`✅ <strong>Observación guardada en la nube a las ${hora}.</strong><br>${resumen}${obsBannerBtns(rec.id)}`, true);
   else obsBanner(`⚠️ <strong>Guardada solo en este navegador</strong> (no llegó a Supabase: ${errMsg}).<br>${resumen}${obsBannerBtns(rec.id)}`, false);
   obsMsg('');
-  obsState = {items:{}}; document.getElementById('obsPersona').value=''; obsRender();   /* formulario limpio para la siguiente persona */
+  obsState = {items:{}}; obsRender();   /* formulario limpio; hotel, fecha y evaluadora se conservan */
+  obsSuggestNext();
   obsRenderHistory(); obsFillNames();
   renderSopCompliance();
 }
@@ -2585,7 +2614,14 @@ ${supL.length?`<h2>Cuestionarios de supervisoras</h2>${detSup}`:''}
 (function obsInit(){
   const sel = document.getElementById('obsHotel');
   sel.innerHTML = HOTELS.map(h=>`<option value="${h}">${h}</option>`).join('');
-  document.getElementById('obsFecha').value = todayStr();
+  const pr = obsPrefsLoad();
+  document.getElementById('obsFecha').value = (pr && pr.fecha && pr.day===todayStr()) ? pr.fecha : todayStr();
+  if(pr && pr.hotel && HOTELS.indexOf(pr.hotel)>=0) sel.value = pr.hotel;
+  if(pr && pr.eval) document.getElementById('obsEval').value = pr.eval;
+  /* el hotel y la fecha del formulario principal también preseleccionan la observación */
+  const fh=document.getElementById('f_hotel'), ff=document.getElementById('f_fecha');
+  if(fh) fh.addEventListener('change', ()=>{ if(fh.value && HOTELS.indexOf(fh.value)>=0){ sel.value=fh.value; obsContextChanged(); } });
+  if(ff) ff.addEventListener('change', ()=>{ if(ff.value){ document.getElementById('obsFecha').value=ff.value; obsContextChanged(); } });
   obsRender();
 })();
 loadEntries().then(()=>obsLoadAll());
